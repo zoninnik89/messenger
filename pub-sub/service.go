@@ -1,12 +1,20 @@
 package main
 
-import "sync"
+import (
+	"sync"
 
-type PubSub struct {
+	pb "github.com/zoninnik89/messenger/common/api"
+)
+
+type Client struct {
+	messageChannel chan pb.MessageResponse
+}
+
+type PubSubService struct {
 	chats sync.Map
 }
 
-func NewPubSub() *PubSub {
+func NewPubSubService() *PubSub {
 	return &PubSub{}
 }
 

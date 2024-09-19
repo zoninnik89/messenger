@@ -2,7 +2,7 @@ package main
 
 import "context"
 
-type PubSubService interface {
+type PubSubServiceInterface interface {
 	Subscribe(context.Context, chan string)
 	Publish(context.Context, string)
 }

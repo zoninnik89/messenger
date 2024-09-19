@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "https://github.com/zoninnik89/messenger/common/api";
+
+package api;
+
+service PubSubService {
+  // Client subscribes to a chat and receives messages via streaming.
+  rpc Subscribe(SubscribeRequest) returns (stream MessageResponse);
+
+  // Publish a message to a chat.
+  rpc Publish(PublishRequest) returns (PublishResponse);
+}
+
+message Message {
+  string SenderID = 2;
+  string SenderName = 3;
+  string MessageText = 4;
+  int64 timestamp = 5;
+}
+
+message SubscribeRequest {
+  string chat = 1;
+}
+
+message PublishRequest {
+  string chat = 1;
+  Message message = 2;
+}
+
+message PublishResponse {
+  string status = 1;
+}
+
+message MessageResponse {
+  Message message = 1;
+}
