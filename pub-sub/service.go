@@ -1,45 +1,10 @@
 package main
 
 import (
+	"context"
 	"github.com/prometheus/common/log"
-	"sync"
-
 	pb "github.com/zoninnik89/messenger/common/api"
 )
-
-type AsyncMap struct {
-	store sync.Map
-}
-
-func NewAsyncMap() *AsyncMap {
-	return &AsyncMap{}
-}
-
-// Add a value to the slice at the given key
-func (m *AsyncMap) Add(key string, value *Client) {
-	// Use LoadOrStore to get or initialize the slice
-	val, _ := m.store.LoadOrStore(key, &[]*Client{})
-
-	// Use a mutex to protect appending to the slice
-	mu := sync.Mutex{}
-	mu.Lock()
-	defer mu.Unlock()
-
-	slice := val.(*[]*Client)      // Type assertion
-	*slice = append(*slice, value) // Append to the slice
-}
-
-// Get the slice of values for the given key
-func (m *AsyncMap) Get(key string) []int {
-	val, ok := m.store.Load(key)
-	if !ok {
-		return []int{}
-	}
-
-	// Return a copy of the slice to avoid race conditions
-	slice := *val.(*[]int)
-	return slice
-}
 
 type Client struct {
 	messageChannel chan *pb.MessageResponse
@@ -75,6 +40,28 @@ func (p *PubSubService) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubServ
 	}
 }
 
-func (p *PubSub) Publish(chat chan string, msg string) {
-	chat <- msg
+func (p *PubSubService) Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
+	clients := p.chats.Get(req.Chat)
+
+	// If there are no available recipients
+	if len(clients) == 0 {
+		return &pb.PublishResponse{Status: "No recipients"}, nil
+	}
+
+	// Send the message to all clients
+	for _, client := range clients {
+		client.messageChannel <- &pb.MessageResponse{Message: req.Message}
+	}
+
+	return &pb.PublishResponse{Status: "Message was sent"}, nil
+}
+
+func (p *PubSubService) removeClient(chat string, client *Client) {
+	clients := p.chats.Get(chat)
+
+	for i, c := range clients {
+		if c == client {
+			p.chats
+		}
+	}
 }
