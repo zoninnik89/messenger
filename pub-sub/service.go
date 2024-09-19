@@ -3,7 +3,7 @@ package main
 import (
 	"sync"
 
-	pb "github.com/zoninnik89/messenger/common/api"
+	pb "github.com/zoninnik89/messenger"
 )
 
 type Client struct {
