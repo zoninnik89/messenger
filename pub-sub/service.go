@@ -11,7 +11,6 @@ type Client struct {
 }
 
 type PubSubService struct {
-	pb.UnimplementedPubSubServiceServer
 	chats *AsyncMap
 }
 
@@ -44,12 +43,12 @@ func (p *PubSubService) Publish(ctx context.Context, req *pb.PublishRequest) (*p
 	clients := p.chats.Get(req.Chat)
 
 	// If there are no available recipients
-	if len(clients) == 0 {
+	if clients.Size() == 0 {
 		return &pb.PublishResponse{Status: "No recipients"}, nil
 	}
 
 	// Send the message to all clients
-	for _, client := range clients {
+	for client := range clients.store {
 		client.messageChannel <- &pb.MessageResponse{Message: req.Message}
 	}
 
@@ -57,11 +56,5 @@ func (p *PubSubService) Publish(ctx context.Context, req *pb.PublishRequest) (*p
 }
 
 func (p *PubSubService) removeClient(chat string, client *Client) {
-	clients := p.chats.Get(chat)
-
-	for i, c := range clients {
-		if c == client {
-			p.chats
-		}
-	}
+	p.chats.Remove(chat, client)
 }

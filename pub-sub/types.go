@@ -1,8 +1,11 @@
 package main
 
-import "context"
+import (
+	"context"
+	pb "github.com/zoninnik89/messenger/common/api"
+)
 
 type PubSubServiceInterface interface {
-	Subscribe(context.Context, chan string)
-	Publish(context.Context, string)
+	Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_SubscribeServer) error
+	Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error)
 }

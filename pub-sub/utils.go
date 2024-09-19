@@ -7,30 +7,34 @@ import (
 // Hashset implementation
 
 type HashSet struct {
-	store map[interface{}]struct{}
+	store map[*Client]struct{}
 }
 
 // NewHashSet creates a new empty HashSet.
 func NewHashSet() *HashSet {
 	return &HashSet{
-		store: make(map[interface{}]struct{}),
+		store: make(map[*Client]struct{}),
 	}
 }
 
 // Add inserts a value into the set.
-func (s *HashSet) Add(value interface{}) {
+func (s *HashSet) Add(value *Client) {
 	s.store[value] = struct{}{} // Empty struct takes no space.
 }
 
 // Remove deletes a value from the set.
-func (s *HashSet) Remove(value interface{}) {
+func (s *HashSet) Remove(value *Client) {
 	delete(s.store, value)
 }
 
 // Contains checks if a value is in the set.
-func (s *HashSet) Contains(value interface{}) bool {
+func (s *HashSet) Contains(value *Client) bool {
 	_, exists := s.store[value]
 	return exists
+}
+
+func (s *HashSet) Size() int {
+	return len(s.store)
 }
 
 // Async Map
