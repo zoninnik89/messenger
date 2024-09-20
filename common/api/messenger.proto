@@ -12,12 +12,12 @@ service PubSubService {
   rpc Publish(PublishRequest) returns (PublishResponse);
 }
 
-message Message {
-  string SenderID = 2;
-  string SenderName = 3;
-  string MessageText = 4;
-  int64 timestamp = 5;
-}
+//message Message {
+//  string SenderID = 2;
+//  string SenderName = 3;
+//  string MessageText = 4;
+//  int64 timestamp = 5;
+//}
 
 message SubscribeRequest {
   string chat = 1;
@@ -25,7 +25,7 @@ message SubscribeRequest {
 
 message PublishRequest {
   string chat = 1;
-  Message message = 2;
+  string message = 2;
 }
 
 message PublishResponse {
@@ -33,5 +33,5 @@ message PublishResponse {
 }
 
 message MessageResponse {
-  Message message = 1;
+  string message = 1;
 }
