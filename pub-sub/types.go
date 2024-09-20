@@ -7,5 +7,5 @@ import (
 
 type PubSubServiceInterface interface {
 	Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_SubscribeServer) error
-	Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error)
+	Publish(ctx context.Context, req *pb.PublishRequest) *pb.PublishResponse
 }

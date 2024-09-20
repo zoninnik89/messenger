@@ -39,12 +39,12 @@ func (p *PubSubService) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubServ
 	}
 }
 
-func (p *PubSubService) Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
+func (p *PubSubService) Publish(ctx context.Context, req *pb.PublishRequest) *pb.PublishResponse {
 	clients := p.chats.Get(req.Chat)
 
 	// If there are no available recipients
 	if clients.Size() == 0 {
-		return &pb.PublishResponse{Status: "No recipients"}, nil
+		return &pb.PublishResponse{Status: "No recipients"}
 	}
 
 	// Send the message to all clients
@@ -52,7 +52,7 @@ func (p *PubSubService) Publish(ctx context.Context, req *pb.PublishRequest) (*p
 		client.messageChannel <- &pb.MessageResponse{Message: req.Message}
 	}
 
-	return &pb.PublishResponse{Status: "Message was sent"}, nil
+	return &pb.PublishResponse{Status: "Message was sent"}
 }
 
 func (p *PubSubService) removeClient(chat string, client *Client) {

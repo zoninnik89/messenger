@@ -30,7 +30,7 @@ func main() {
 
 	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(serviceName)
-	if err := registry.Register(ctx, instanceID, serviceName, httpAddress); err != nil {
+	if err := registry.Register(ctx, instanceID, serviceName, grpcAddress); err != nil {
 		panic(err)
 	}
 
