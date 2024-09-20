@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+
+  consul:
+    image: hashicorp/consul:latest
+    container_name: consul
+    ports:
+      - "8500:8500"  # Consul UI and API
+      - "8600:8600/udp"  # DNS interface
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    command: agent -server -bootstrap -ui -client=0.0.0.0
+      # volumes:
+    # - consul_data:/consul/data

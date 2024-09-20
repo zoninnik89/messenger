@@ -17,7 +17,7 @@ func NewGrpcHandler(grpcServer *grpc.Server, service PubSubServiceInterface) {
 }
 
 func (h *GrpcHandler) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
-	return h.service.Publish(ctx, request)
+	return h.service.Publish(ctx, request), nil
 }
 
 func (h *GrpcHandler) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_SubscribeServer) error {

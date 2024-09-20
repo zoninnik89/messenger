@@ -50,7 +50,7 @@ func NewAsyncMap() *AsyncMap {
 // Add a value to the slice at the given key
 func (m *AsyncMap) Add(key string, value *Client) {
 	// Use LoadOrStore to get or initialize the slice
-	chat, _ := m.store.LoadOrStore(key, &HashSet{})
+	chat, _ := m.store.LoadOrStore(key, NewHashSet())
 
 	// Use a mutex to protect appending to the slice
 	mu := sync.Mutex{}
