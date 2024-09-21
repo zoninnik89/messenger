@@ -2,30 +2,33 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"github.com/zoninnik89/messenger/chat-client/logging"
 	pb "github.com/zoninnik89/messenger/common/api"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"io"
-	"log"
 )
 
 type ChatClient struct {
 	client pb.PubSubServiceClient
+	logger *zap.SugaredLogger
 }
 
 func NewChatClient(conn *grpc.ClientConn) *ChatClient {
 	return &ChatClient{
 		client: pb.NewPubSubServiceClient(conn),
+		logger: logging.GetLogger().Sugar(),
 	}
 }
 
 func (c *ChatClient) SubscribeToChat(chat string) {
 	stream, err := c.client.Subscribe(context.Background(), &pb.SubscribeRequest{Chat: chat})
 	if err != nil {
-		log.Fatalf("Failed to subscribe to chat: %v", err)
+		c.logger.Fatalw("failed to subscribe to chat", "err", err)
+		return
 	}
 
-	log.Printf("Subscribed to chat: %v", chat)
+	c.logger.Infow("Subscribed to chat", "chat", chat)
 
 	// Continuously receive messages from the stream
 	for {
@@ -35,11 +38,11 @@ func (c *ChatClient) SubscribeToChat(chat string) {
 			break
 		}
 		if err != nil {
-			log.Fatalf("Failed to receive a message: %v", err)
+			c.logger.Fatalw("failed to receive a message", "err", err)
 		}
 
 		// Log the received message
-		fmt.Printf("Received a message: %v from: %v", msg.Message, chat)
+		c.logger.Infow("Received a message", "message", msg.Message, "chat", chat)
 	}
 }
 
@@ -50,8 +53,9 @@ func (c *ChatClient) SendMessage(chat, message string) {
 		Message: message,
 	})
 	if err != nil {
-		log.Fatalf("Failed to send a message: %v", err)
+		c.logger.Fatalw("failed to send the message", "err", err)
+		return
 	}
 
-	log.Printf("Meesage was sent: %v, Status: %v", message, resp.Status)
+	c.logger.Infow("Message sent", "message", message, "chat", chat, "status", resp.Status)
 }

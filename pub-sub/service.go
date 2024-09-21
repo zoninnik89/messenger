@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/prometheus/common/log"
+
 	pb "github.com/zoninnik89/messenger/common/api"
+	"github.com/zoninnik89/messenger/pub-sub/logging"
+	"go.uber.org/zap"
 )
 
 type Client struct {
@@ -11,11 +13,12 @@ type Client struct {
 }
 
 type PubSubService struct {
-	chats *AsyncMap
+	chats  *AsyncMap
+	logger *zap.SugaredLogger
 }
 
 func NewPubSubService() *PubSubService {
-	return &PubSubService{chats: NewAsyncMap()}
+	return &PubSubService{chats: NewAsyncMap(), logger: logging.GetLogger().Sugar()}
 }
 
 func (p *PubSubService) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_SubscribeServer) error {
@@ -29,11 +32,11 @@ func (p *PubSubService) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubServ
 		select {
 		case msg := <-client.messageChannel:
 			if err := stream.Send(msg); err != nil {
-				log.Errorf("Error sending message to client: %v", err)
+				p.logger.Errorw("error sending message to client", "err", err)
 				return err
 			}
 		case <-stream.Context().Done():
-			log.Infof("Client disconnected from chat: %v", req.Chat)
+			p.logger.Infow("Client disconnected from chat", "chat", req.Chat)
 			return nil
 		}
 	}

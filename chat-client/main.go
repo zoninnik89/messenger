@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"github.com/zoninnik89/messenger/chat-client/logging"
 	common "github.com/zoninnik89/messenger/common"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
 	zap "go.uber.org/zap"
-	"log"
+	"google.golang.org/grpc"
 	"time"
 )
 
@@ -17,39 +18,50 @@ var (
 )
 
 func main() {
-	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
-	zap.ReplaceGlobals(logger)
+	logger := logging.InitLogger()
+	defer logging.Sync()
 
 	registry, err := consul.NewRegistry(consulAddress, serviceName)
 	if err != nil {
+		logger.Panic("failed to connect to Consul", zap.Error(err))
 		panic(err)
 	}
 
 	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(serviceName)
 	if err := registry.Register(ctx, instanceID, serviceName, grpcAddress); err != nil {
+		logger.Panic("failed to register service", zap.Error(err))
 		panic(err)
 	}
 
 	go func() {
 		for {
 			if err := registry.HealthCheck(instanceID, serviceName); err != nil {
-				log.Fatal("failed to health check")
+				logger.Warn("failed to health check", zap.Error(err))
 			}
 			time.Sleep(time.Second * 1)
 		}
 	}()
 
-	defer registry.Deregister(ctx, instanceID, serviceName)
+	defer func(registry *consul.Registry, ctx context.Context, instanceID string, serviceName string) {
+		err := registry.Deregister(ctx, instanceID, serviceName)
+		if err != nil {
+			logger.Fatal("failed to deregister service", zap.Error(err))
+		}
+	}(registry, ctx, instanceID, serviceName)
 
 	newGateway := discovery.Registry(registry)
 
 	conn, err := discovery.ServiceConnection(ctx, "pub-sub", newGateway)
 	if err != nil {
-		log.Fatalf("Failed to connect to server: %v", err)
+		logger.Fatal("failed to dial pub-sub server", zap.Error(err))
 	}
-	defer conn.Close()
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+			logger.Warn("failed to close connection with Pub-Sub server", zap.Error(err))
+		}
+	}(conn)
 
 	client := NewChatClient(conn)
 
