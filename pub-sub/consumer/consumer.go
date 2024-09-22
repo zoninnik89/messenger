@@ -2,15 +2,14 @@ package consumer
 
 import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	common "github.com/zoninnik89/commons"
-	"log"
+	common "github.com/zoninnik89/messenger/common"
 )
 
 var (
 	KafkaServerAddress = common.EnvString("KAFKA_SERVER_ADDRESS", "localhost:9092")
 )
 
-func NewKafkaConsumer() *kafka.Consumer {
+func NewKafkaConsumer() (*kafka.Consumer, error) {
 
 	configMap := &kafka.ConfigMap{
 		"bootstrap.servers": KafkaServerAddress,
@@ -21,7 +20,7 @@ func NewKafkaConsumer() *kafka.Consumer {
 	c, err := kafka.NewConsumer(configMap)
 
 	if err != nil {
-		log.Println("error consumer", err.Error())
+		return nil, err
 	}
-	return c
+	return c, nil
 }

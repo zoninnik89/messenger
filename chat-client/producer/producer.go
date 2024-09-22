@@ -10,11 +10,11 @@ var (
 	KafkaServerAddress = common.EnvString("KAFKA_SERVER_ADDRESS", "localhost:9092")
 )
 
-type ClickProducer struct {
+type MessageProducer struct {
 	Producer *kafka.Producer
 }
 
-func NewKafkaProducer() *ClickProducer {
+func NewKafkaProducer() (*MessageProducer, error) {
 	configMap := &kafka.ConfigMap{
 		"bootstrap.servers": KafkaServerAddress,
 		//"delivery.timeout.ms": "1",
@@ -24,15 +24,15 @@ func NewKafkaProducer() *ClickProducer {
 	p, err := kafka.NewProducer(configMap)
 
 	if err != nil {
-		log.Println(err.Error())
+		return nil, err
 	}
 
-	return &ClickProducer{
+	return &MessageProducer{
 		Producer: p,
-	}
+	}, nil
 }
 
-func (p *ClickProducer) Publish(msg string, topic string, key []byte, deliveryChan chan kafka.Event) error {
+func (p *MessageProducer) Publish(msg string, topic string, key []byte, deliveryChan chan kafka.Event) error {
 	message := &kafka.Message{
 		Value:          []byte(msg),
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
@@ -48,7 +48,7 @@ func (p *ClickProducer) Publish(msg string, topic string, key []byte, deliveryCh
 	return nil
 }
 
-func (p *ClickProducer) DeliveryReport(deliveryChan chan kafka.Event) {
+func (p *MessageProducer) DeliveryReport(deliveryChan chan kafka.Event) {
 	for e := range deliveryChan {
 		switch e.(type) {
 		case *kafka.Message:
@@ -63,21 +63,3 @@ func (p *ClickProducer) DeliveryReport(deliveryChan chan kafka.Event) {
 		}
 	}
 }
-
-//func (p *ClickProducer) Flush(timeoutMs int) int {
-//	termChan := make(chan bool)
-//
-//	d, _ := time.ParseDuration(fmt.Sprintf("%dms", timeoutMs))
-//	tEnd := time.Now().Add(d)
-//	for p.producer.Len() > 0 {
-//		remain := tEnd.Sub(time.Now()).Seconds()
-//		if remain <= 0.0 {
-//			return p.producer.Len()
-//		}
-//
-//		p.producer.handle.eventPoll(p.producer.events,
-//			int(math.Min(100, remain*1000)), 1000, termChan)
-//	}
-//
-//	return 0
-//}

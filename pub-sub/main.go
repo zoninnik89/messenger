@@ -5,7 +5,9 @@ import (
 	common "github.com/zoninnik89/messenger/common"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
+	c "github.com/zoninnik89/messenger/pub-sub/consumer"
 	"github.com/zoninnik89/messenger/pub-sub/logging"
+	s "github.com/zoninnik89/messenger/pub-sub/service"
 	zap "go.uber.org/zap"
 	"google.golang.org/grpc"
 	"net"
@@ -24,21 +26,21 @@ func main() {
 
 	registry, err := consul.NewRegistry(consulAddress, serviceName)
 	if err != nil {
-		logger.Panic("failed to connect to Consul", zap.Error(err))
+		logger.Panic("Failed to connect to Consul", zap.Error(err))
 		panic(err)
 	}
 
 	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(serviceName)
 	if err := registry.Register(ctx, instanceID, serviceName, grpcAddress); err != nil {
-		logger.Panic("failed to register service", zap.Error(err))
+		logger.Panic("Failed to register service", zap.Error(err))
 		panic(err)
 	}
 
 	go func() {
 		for {
 			if err := registry.HealthCheck(instanceID, serviceName); err != nil {
-				logger.Warn("failed to health check", zap.Error(err))
+				logger.Warn("Failed to health check", zap.Error(err))
 			}
 			time.Sleep(time.Second * 1)
 		}
@@ -47,7 +49,7 @@ func main() {
 	defer func(registry *consul.Registry, ctx context.Context, instanceID string, serviceName string) {
 		err := registry.Deregister(ctx, instanceID, serviceName)
 		if err != nil {
-			logger.Fatal("failed to deregister service", zap.Error(err))
+			logger.Fatal("Failed to deregister service", zap.Error(err))
 		}
 	}(registry, ctx, instanceID, serviceName)
 
@@ -55,7 +57,7 @@ func main() {
 
 	l, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
-		logger.Fatal("failed to listen:", zap.Error(err))
+		logger.Fatal("Failed to listen:", zap.Error(err))
 	}
 	defer func(l net.Listener) {
 		err := l.Close()
@@ -64,12 +66,37 @@ func main() {
 		}
 	}(l)
 
-	service := NewPubSubService()
-	NewGrpcHandler(grpcServer, service)
+	service := s.NewPubSubService()
+	s.NewGrpcHandler(grpcServer, service)
 
 	logger.Info("Starting HTTP server", zap.String("port", grpcAddress))
 
+	logger.Info("Starting Kafka Consumer")
+	consumer, err := c.NewKafkaConsumer()
+	if err != nil {
+		logger.Panic("Failed to create kafka consumer", zap.Error(err))
+		panic(err)
+	}
+
+	topics := []string{"clicks"}
+	err = consumer.SubscribeTopics(topics, nil)
+
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+		m, err := service.ConsumeMessage(ctx, consumer)
+		if err != nil {
+			logger.Fatal("Error consuming a message", zap.Error(err))
+		} else {
+			logger.Info("Message was consumed with status", zap.String("message", m.Status))
+		}
+
+		time.Sleep(time.Second * 1)
+	}()
+
 	if err := grpcServer.Serve(l); err != nil {
-		logger.Fatal("failed to serve", zap.Error(err))
+		logger.Fatal("Failed to serve", zap.Error(err))
 	}
 }

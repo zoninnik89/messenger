@@ -1,23 +1,19 @@
-package main
+package service
 
 import (
-	"context"
 	pb "github.com/zoninnik89/messenger/common/api"
+	"github.com/zoninnik89/messenger/pub-sub/types"
 	"google.golang.org/grpc"
 )
 
 type GrpcHandler struct {
 	pb.UnimplementedPubSubServiceServer
-	service PubSubServiceInterface
+	service types.PubSubServiceInterface
 }
 
-func NewGrpcHandler(grpcServer *grpc.Server, service PubSubServiceInterface) {
+func NewGrpcHandler(grpcServer *grpc.Server, service types.PubSubServiceInterface) {
 	handler := &GrpcHandler{service: service}
 	pb.RegisterPubSubServiceServer(grpcServer, handler)
-}
-
-func (h *GrpcHandler) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
-	return h.service.Publish(ctx, request), nil
 }
 
 func (h *GrpcHandler) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_SubscribeServer) error {

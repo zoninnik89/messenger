@@ -1,40 +1,41 @@
-package main
+package utils
 
 import (
+	"github.com/zoninnik89/messenger/pub-sub/types"
 	"sync"
 )
 
 // Hashset implementation
 
 type HashSet struct {
-	store map[*Client]struct{}
+	Store map[*types.Client]struct{}
 }
 
 // NewHashSet creates a new empty HashSet.
 func NewHashSet() *HashSet {
 	return &HashSet{
-		store: make(map[*Client]struct{}),
+		Store: make(map[*types.Client]struct{}),
 	}
 }
 
 // Add inserts a value into the set.
-func (s *HashSet) Add(value *Client) {
-	s.store[value] = struct{}{} // Empty struct takes no space.
+func (s *HashSet) Add(value *types.Client) {
+	s.Store[value] = struct{}{} // Empty struct takes no space.
 }
 
 // Remove deletes a value from the set.
-func (s *HashSet) Remove(value *Client) {
-	delete(s.store, value)
+func (s *HashSet) Remove(value *types.Client) {
+	delete(s.Store, value)
 }
 
 // Contains checks if a value is in the set.
-func (s *HashSet) Contains(value *Client) bool {
-	_, exists := s.store[value]
+func (s *HashSet) Contains(value *types.Client) bool {
+	_, exists := s.Store[value]
 	return exists
 }
 
 func (s *HashSet) Size() int {
-	return len(s.store)
+	return len(s.Store)
 }
 
 // Async Map
@@ -48,7 +49,7 @@ func NewAsyncMap() *AsyncMap {
 }
 
 // Add a value to the slice at the given key
-func (m *AsyncMap) Add(key string, value *Client) {
+func (m *AsyncMap) Add(key string, value *types.Client) {
 	// Use LoadOrStore to get or initialize the slice
 	chat, _ := m.store.LoadOrStore(key, NewHashSet())
 
@@ -71,7 +72,7 @@ func (m *AsyncMap) Get(key string) *HashSet {
 	return chat.(*HashSet)
 }
 
-func (m *AsyncMap) Remove(key string, client *Client) {
+func (m *AsyncMap) Remove(key string, client *types.Client) {
 	chat, ok := m.store.Load(key)
 	if !ok {
 		return

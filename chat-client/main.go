@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/zoninnik89/messenger/chat-client/logging"
+	kafkaProducer "github.com/zoninnik89/messenger/chat-client/producer"
 	common "github.com/zoninnik89/messenger/common"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
@@ -63,13 +64,19 @@ func main() {
 		}
 	}(conn)
 
-	client := NewChatClient(conn)
+	kp, err := kafkaProducer.NewKafkaProducer()
+	if err != nil {
+		logger.Panic("failed to connect to Kafka", zap.Error(err))
+	}
+	defer kp.Producer.Flush(10)
 
-	go client.SubscribeToChat("chatroom1")
+	client := NewChatClient(conn, kp)
+
+	go client.SubscribeToChat("test", "chatroom1")
 
 	time.Sleep(2 * time.Second)
 
-	client.SendMessage("chatroom1", "Hello, everyone!")
+	client.SendMessage("chatroom1", "testID", "Hello, everyone!")
 
 	select {}
 
