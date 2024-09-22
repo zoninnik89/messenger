@@ -13,10 +13,9 @@ service PubSubService {
 }
 
 message Message {
-  string SenderID = 2;
-  string SenderName = 3;
-  string MessageText = 4;
-  int64 timestamp = 5;
+  string SenderID = 1;
+  string MessageText = 2;
+  string SentTS = 3;
 }
 
 message SubscribeRequest {
