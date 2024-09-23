@@ -13,17 +13,18 @@ service PubSubService {
 }
 
 message Message {
-  string SenderID = 1;
-  string MessageText = 2;
-  string SentTS = 3;
+  string sender_id = 1;
+  string message_id = 2;
+  string message_text = 3;
+  string sent_ts = 4;
 }
 
 message SubscribeRequest {
-  string chat = 1;
+  string chat_id = 1;
 }
 
 message PublishRequest {
-  string chat = 1;
+  string chat_id = 1;
   Message message = 2;
 }
 
@@ -33,4 +34,32 @@ message PublishResponse {
 
 message MessageResponse {
   Message message = 1;
+}
+
+// Chat History
+
+service ChatHistoryService {
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+  rpc SendMessageReadEvent(SendMessageReadEventRequest) returns (SendMessageReadEventResponse);
+}
+
+message GetMessagesRequest {
+  string chat_id = 1;
+  string from_ts = 2;
+  string to_ts = 3;
+}
+
+message GetMessagesResponse {
+  repeated Message message = 1;
+}
+
+message SendMessageReadEventRequest {
+  string chat_id = 1;
+  string message_id = 2;
+  string read_by_user_id = 3;
+  string read_at = 4;
+}
+
+message SendMessageReadEventResponse {
+  string status = 1;
 }
