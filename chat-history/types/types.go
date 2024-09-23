@@ -1,6 +1,10 @@
 package types
 
+import (
+	pb "github.com/zoninnik89/messenger/common/api"
+)
+
 type ChatHistoryServiceInterface interface {
-	SaveMessage(chatID, message string) error
-	GetMessages(chatID string) ([]string, error)
+	GetMessages(request *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error)
+	SendMessageReadEvent(request *pb.SendMessageReadEventRequest) (*pb.SendMessageReadEventResponse, error)
 }

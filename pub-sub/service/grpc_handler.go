@@ -11,8 +11,8 @@ type GrpcHandler struct {
 	service types.PubSubServiceInterface
 }
 
-func NewGrpcHandler(grpcServer *grpc.Server, service types.PubSubServiceInterface) {
-	handler := &GrpcHandler{service: service}
+func NewGrpcHandler(grpcServer *grpc.Server, s types.PubSubServiceInterface) {
+	handler := &GrpcHandler{service: s}
 	pb.RegisterPubSubServiceServer(grpcServer, handler)
 }
 

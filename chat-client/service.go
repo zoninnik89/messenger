@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/google/uuid"
 	"github.com/zoninnik89/messenger/chat-client/logging"
 	producer "github.com/zoninnik89/messenger/chat-client/producer"
 	pb "github.com/zoninnik89/messenger/common/api"
@@ -56,9 +57,10 @@ func (c *ChatClient) SubscribeToChat(senderID, chat string) {
 	}
 }
 
-func (c *ChatClient) SendMessage(chat, senderID, message string) {
+func (c *ChatClient) SendMessage(chatID, senderID, messageText string) {
 	// publish message to the chat
-	value := chat + "," + senderID + "," + message + "," + strconv.FormatInt(time.Now().Unix(), 10)
+	messageID := uuid.New().String()
+	value := chatID + "," + senderID + "," + messageID + "," + messageText + "," + strconv.FormatInt(time.Now().Unix(), 10)
 
 	deliveryChan := make(chan kafka.Event)
 	err := c.queue.Publish(value, "messages", nil, deliveryChan)
@@ -71,9 +73,9 @@ func (c *ChatClient) SendMessage(chat, senderID, message string) {
 	msg := e.(*kafka.Message)
 
 	if msg.TopicPartition.Error != nil {
-		c.logger.Errorw("Message was not published", "error", msg.TopicPartition.Error)
+		c.logger.Errorw("Message was not published", "messageID", messageID, "error", msg.TopicPartition.Error)
 	} else {
-		c.logger.Infow("Message successfully published", "message", msg.TopicPartition, "time", msg.Timestamp.String())
+		c.logger.Infow("Message successfully published", "messageID", messageID, "topic", msg.TopicPartition, "time", msg.Timestamp.String())
 	}
 	close(deliveryChan)
 

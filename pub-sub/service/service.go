@@ -22,12 +22,12 @@ func NewPubSubService() *PubSubService {
 }
 
 func (p *PubSubService) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_SubscribeServer) error {
-	p.Logger.Infow("Subscribe method called", "chat", req.Chat)
+	p.Logger.Infow("Subscribe method called", "chat", req.ChatID)
 	channel := make(chan *pb.MessageResponse, 500)
 	client := &types.Client{
 		MessageChannel: &channel,
 	}
-	p.Chats.Add(req.Chat, client)
+	p.Chats.Add(req.ChatID, client)
 
 	for {
 		select {
@@ -35,12 +35,12 @@ func (p *PubSubService) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubServ
 			p.Logger.Infow("Received message from client channel", "message", msg.Message)
 			if err := stream.Send(msg); err != nil {
 				p.Logger.Errorw("error sending message to client", "err", err)
-				p.removeClient(req.Chat, client) // Removing the client from the Async map
+				p.removeClient(req.ChatID, client) // Removing the client from the Async map
 				return err
 			}
 		case <-stream.Context().Done():
-			p.Logger.Infow("Client disconnected from chat", "chat", req.Chat)
-			p.removeClient(req.Chat, client) // Removing the client from the Async map
+			p.Logger.Infow("Client disconnected from chat", "chat", req.ChatID)
+			p.removeClient(req.ChatID, client) // Removing the client from the Async map
 			return nil
 		default:
 			//p.Logger.Debugw("Waiting in select block")
@@ -55,9 +55,9 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 		return nil, err
 	}
 	msgSlice := strings.Split(string(msg.Value), ",")
-	chat, senderID, messageText, sentTime := msgSlice[0], msgSlice[1], msgSlice[2], msgSlice[3]
+	chatID, senderID, messageID, messageText, sentTime := msgSlice[0], msgSlice[1], msgSlice[2], msgSlice[3], msgSlice[4]
 
-	clients := p.Chats.Get(chat)
+	clients := p.Chats.Get(chatID)
 
 	// If there are no available recipients
 	if clients.Size() == 0 {
@@ -66,9 +66,10 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 
 	// Send the message to all clients
 	for client := range clients.Store {
-		p.Logger.Infow("Sending message to client", "chat", chat, "senderID", senderID, "message", messageText, "sentTime", sentTime)
+		p.Logger.Infow("Sending message to client", "chatID", chatID, "senderID", senderID, "messageID", messageID, "messageText", messageText, "sentTime", sentTime)
 		*client.MessageChannel <- &pb.MessageResponse{Message: &pb.Message{
 			SenderID:    senderID,
+			MessageID:   messageID,
 			MessageText: messageText,
 			SentTS:      sentTime,
 		}}
