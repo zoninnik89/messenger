@@ -13,8 +13,8 @@ func NewKafkaConsumer() (*kafka.Consumer, error) {
 
 	configMap := &kafka.ConfigMap{
 		"bootstrap.servers": KafkaServerAddress,
-		"client.id":         "aggregator-consumer",
-		"group.id":          "aggregator-group",
+		"client.id":         "pub-sub-consumer",
+		"group.id":          "pub-sub-group",
 	}
 
 	c, err := kafka.NewConsumer(configMap)
