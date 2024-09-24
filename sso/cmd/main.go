@@ -20,4 +20,12 @@ func main() {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	s := <-stop
+
+	logger.Infow("Shutting down gracefully", "signal", s)
+
+	application.GRPCsrv.Stop()
+
+	logger.Info("Shut down gracefully")
 }
