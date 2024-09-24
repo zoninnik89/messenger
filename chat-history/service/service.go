@@ -38,7 +38,8 @@ func (s *ChatHistoryService) ConsumeMessage(ctx context.Context, queue *kafka.Co
 		MessageId:   messageID,
 		MessageText: messageText,
 		SenderId:    senderID,
-		SentTs:      sentTime}, nil
+		SentTs:      sentTime,
+	}, nil
 }
 
 func (s *ChatHistoryService) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error) {
