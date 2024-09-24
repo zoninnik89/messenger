@@ -15,9 +15,9 @@ func Register(s *grpc.Server) {
 }
 
 func (s *serverAPI) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-
+	panic("implement me")
 }
 
 func (s *serverAPI) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	
+	panic("implement me")
 }
