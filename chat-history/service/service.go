@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/zoninnik89/messenger/chat-history/logging"
 	"github.com/zoninnik89/messenger/chat-history/types"
 	pb "github.com/zoninnik89/messenger/common/api"
 	"go.uber.org/zap"
@@ -15,25 +16,29 @@ type ChatHistoryService struct {
 }
 
 func NewChatHistoryService(s types.StoreInterface) *ChatHistoryService {
-	return &ChatHistoryService{store: s}
+	l := logging.GetLogger().Sugar()
+	return &ChatHistoryService{store: s, logger: l}
 }
 
-func (s *ChatHistoryService) StoreMessage(ctx context.Context, consumer *kafka.Consumer) error {
-
-	msg, err := consumer.ReadMessage(-1)
+func (s *ChatHistoryService) ConsumeMessage(ctx context.Context, queue *kafka.Consumer) (*pb.Message, error) {
+	msg, err := queue.ReadMessage(-1)
 	if err != nil {
 		s.logger.Fatalw("Failed to read message", "err", err)
-		return err
+		return nil, err
 	}
 	msgSlice := strings.Split(string(msg.Value), ",")
 	chatID, senderID, messageID, messageText, sentTime := msgSlice[0], msgSlice[1], msgSlice[2], msgSlice[3], msgSlice[4]
 
 	err = s.store.Add(ctx, chatID, senderID, messageID, messageText, sentTime)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &pb.Message{ChatId: chatID,
+		MessageId:   messageID,
+		MessageText: messageText,
+		SenderId:    senderID,
+		SentTs:      sentTime}, nil
 }
 
 func (s *ChatHistoryService) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error) {
@@ -45,7 +50,7 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, req *pb.GetMessage
 	return &pb.GetMessagesResponse{Message: messages}, nil
 }
 
-func (s *ChatHistoryService) StoreMessageReadEvent(ctx context.Context, req *pb.SendMessageReadEventRequest) error {
+func (s *ChatHistoryService) ConsumeMessageReadEvent(ctx context.Context, req *pb.SendMessageReadEventRequest) error {
 	err := s.store.AddReadEvent(ctx, req.ChatId, req.MessageId, req.ReadByUserId, req.ReadAt)
 	if err != nil {
 		s.logger.Error(err)

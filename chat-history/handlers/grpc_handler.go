@@ -2,25 +2,31 @@ package handlers
 
 import (
 	"context"
+	"github.com/zoninnik89/messenger/chat-history/logging"
 	"github.com/zoninnik89/messenger/chat-history/types"
 	pb "github.com/zoninnik89/messenger/common/api"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
 type GrpcHandler struct {
 	pb.UnimplementedChatHistoryServiceServer
+	logger  *zap.SugaredLogger
 	service types.ChatHistoryServiceInterface
 }
 
 func NewGrpcHandler(grpcServer *grpc.Server, s types.ChatHistoryServiceInterface) {
-	handler := &GrpcHandler{service: s}
+	l := logging.GetLogger().Sugar()
+	handler := &GrpcHandler{service: s, logger: l}
 	pb.RegisterChatHistoryServiceServer(grpcServer, handler)
 }
 
 func (h *GrpcHandler) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error) {
-	return h.service.GetMessages(req)
-}
+	res, err := h.service.GetMessages(ctx, req)
+	if err != nil {
+		h.logger.Errorw("error getting messages", "chatID", req.ChatId, "fromTS", req.FromTs, "toTS", req.ToTs, "error", err)
+	}
 
-func (h *GrpcHandler) SendMessageReadEvent(ctx context.Context, req *pb.SendMessageReadEventRequest) (*pb.SendMessageReadEventResponse, error) {
-	return h.service.SendMessageReadEvent(req)
+	h.logger.Infow("Successfully retrieved messages", "chatID", req.ChatId, "fromTS", req.FromTs, "toTS", req.ToTs)
+	return res, nil
 }

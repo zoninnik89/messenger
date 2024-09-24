@@ -2,13 +2,14 @@ package types
 
 import (
 	"context"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	pb "github.com/zoninnik89/messenger/common/api"
 )
 
 type ChatHistoryServiceInterface interface {
-	StoreMessage(ctx context.Context, message *pb.Message) error
+	ConsumeMessage(ctx context.Context, queue *kafka.Consumer) error
 	GetMessages(ctx context.Context, request *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error)
-	StoreMessageReadEvent(ctx context.Context, request *pb.SendMessageReadEventRequest) error
+	ConsumeMessageReadEvent(ctx context.Context, request *pb.SendMessageReadEventRequest) error
 }
 
 type StoreInterface interface {

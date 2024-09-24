@@ -29,7 +29,7 @@ func NewChatClient(conn *grpc.ClientConn, q *producer.MessageProducer) *ChatClie
 }
 
 func (c *ChatClient) SubscribeToChat(senderID, chat string) {
-	stream, err := c.client.Subscribe(context.Background(), &pb.SubscribeRequest{Chat: chat})
+	stream, err := c.client.Subscribe(context.Background(), &pb.SubscribeRequest{ChatId: chat})
 	if err != nil {
 		c.logger.Fatalw("failed to subscribe to chat", "err", err)
 		return
@@ -51,7 +51,7 @@ func (c *ChatClient) SubscribeToChat(senderID, chat string) {
 		// Log the received message
 		c.logger.Infow("Received a message", "message", msg.Message, "chat", chat)
 
-		if msg.Message.SenderID != senderID {
+		if msg.Message.SenderId != senderID {
 			continue // add writing to another channel for sending through websockets
 		}
 	}
@@ -66,7 +66,7 @@ func (c *ChatClient) SendMessage(chatID, senderID, messageText string) {
 	err := c.queue.Publish(value, "messages", nil, deliveryChan)
 
 	if err != nil {
-		c.logger.Errorw("Error publishing click event in Kafka", zap.Error(err))
+		c.logger.Errorw("Error publishing message event in Kafka", zap.Error(err))
 	}
 
 	e := <-deliveryChan
