@@ -13,10 +13,11 @@ service PubSubService {
 }
 
 message Message {
-  string sender_id = 1;
-  string message_id = 2;
-  string message_text = 3;
-  string sent_ts = 4;
+  string chat_id = 1;
+  string sender_id = 2;
+  string message_id = 3;
+  string message_text = 4;
+  string sent_ts = 5;
 }
 
 message SubscribeRequest {
