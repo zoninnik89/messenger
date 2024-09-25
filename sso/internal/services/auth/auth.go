@@ -81,12 +81,12 @@ func (a *Auth) Login(
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
-	app, err := a.appProvider.App(ctx, appID)
+	app, err := a.appProvider.GetApp(ctx, appID)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	a.logger.Infow("logged in", "user", user)
+	a.logger.Infow("logged in", "user", user.ID)
 
 	token, err := jwt.NewToken(user, app, a.tokenTTL)
 	if err != nil {
