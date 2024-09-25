@@ -42,7 +42,7 @@ func (s *serverAPI) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.
 		return nil, err
 	}
 
-	userID, err := s.service.Register(ctx, req.GetEmail(), req.GetPassword())
+	userID, err := s.service.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
