@@ -2,7 +2,9 @@ package auth
 
 import (
 	"context"
+	"errors"
 	pb "github.com/zoninnik89/messenger/common/api"
+	"github.com/zoninnik89/messenger/sso/internal/services/auth"
 	"github.com/zoninnik89/messenger/sso/internal/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,6 +31,10 @@ func (s *serverAPI) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginR
 
 	token, err := s.service.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
+		}
+
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
@@ -44,6 +50,9 @@ func (s *serverAPI) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.
 
 	userID, err := s.service.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
+		if errors.Is(err, auth.ErrUserAlreadyExists) {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 

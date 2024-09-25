@@ -3,6 +3,7 @@ package grpcapp
 import (
 	"fmt"
 	authgrpc "github.com/zoninnik89/messenger/sso/internal/grpc/auth"
+	"github.com/zoninnik89/messenger/sso/internal/types"
 	"go.uber.org/zap"
 	grpc "google.golang.org/grpc"
 	"net"
@@ -11,12 +12,13 @@ import (
 type App struct {
 	logger     *zap.SugaredLogger
 	grpcServer *grpc.Server
+	service    *types.Auth
 	port       int
 }
 
-func NewApp(l *zap.SugaredLogger, port int) *App {
+func NewApp(l *zap.SugaredLogger, authService types.Auth, port int) *App {
 	grpcServer := grpc.NewServer()
-	authgrpc.Register(grpcServer)
+	authgrpc.Register(grpcServer, authService)
 
 	return &App{grpcServer: grpcServer, logger: l, port: port}
 }

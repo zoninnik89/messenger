@@ -20,5 +20,5 @@ type UserProvider interface {
 }
 
 type AppProvider interface {
-	App(ctx context.Context, appID int) (models.App, error)
+	GetApp(ctx context.Context, id int) (models.App, error)
 }
