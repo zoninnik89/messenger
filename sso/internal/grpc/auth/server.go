@@ -35,6 +35,10 @@ func (s *serverAPI) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginR
 			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
 		}
 
+		if errors.Is(err, auth.ErrInvalidAppID) {
+			return nil, status.Error(codes.InvalidArgument, "invalid app id")
+		}
+
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 

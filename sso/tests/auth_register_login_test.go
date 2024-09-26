@@ -61,6 +61,87 @@ func TestRegisterLogin_Login_HappyPath(t *testing.T) {
 	assert.InDelta(t, loginTime.Add(st.Cfg.TokenTTL).Unix(), claims["exp"].(float64), deltaSeconds)
 }
 
+func TestRegisterLogin_Login_RepeatedRegister(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
+		Email:    email,
+		Password: pass,
+	})
+
+	require.NoError(t, err)
+	assert.NotEmpty(t, respReg.GetUserId())
+
+	respReg, err = st.AuthClient.Register(ctx, &pb.RegisterRequest{
+		Email:    email,
+		Password: pass,
+	})
+
+	require.Error(t, err)
+	assert.Empty(t, respReg.GetUserId())
+	assert.ErrorContains(t, err, "user already exists")
+}
+
+func TestRegisterLogin_Login_RegisterWithNoEmail(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	email := ""
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
+		Email:    email,
+		Password: pass,
+	})
+
+	require.Error(t, err)
+	assert.Empty(t, respReg.GetUserId())
+	assert.ErrorContains(t, err, "email required")
+}
+
+func TestRegisterLogin_Login_RegisterWithNoPassword(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	email := gofakeit.Email()
+	pass := ""
+
+	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
+		Email:    email,
+		Password: pass,
+	})
+
+	require.Error(t, err)
+	assert.Empty(t, respReg.GetUserId())
+	assert.ErrorContains(t, err, "password required")
+}
+
+func TestRegisterLogin_Login_LoginEmptyApp(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
+		Email:    email,
+		Password: pass,
+	})
+
+	require.NoError(t, err)
+	assert.NotEmpty(t, respReg.GetUserId())
+
+	loginResp, err := st.AuthClient.Login(ctx, &pb.LoginRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    emptyAdID,
+	})
+
+	require.Error(t, err)
+	assert.Empty(t, loginResp.GetToken())
+	assert.ErrorContains(t, err, "app id required")
+}
+
 func randomFakePassword() string {
-	return gofakeit.Password(true, true, true, true, false, 1)
+	return gofakeit.Password(true, true, true, true, false, passDefaultLen)
 }
