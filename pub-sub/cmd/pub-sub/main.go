@@ -5,9 +5,9 @@ import (
 	common "github.com/zoninnik89/messenger/common"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
-	c "github.com/zoninnik89/messenger/pub-sub/consumer"
-	"github.com/zoninnik89/messenger/pub-sub/logging"
-	s "github.com/zoninnik89/messenger/pub-sub/service"
+	c "github.com/zoninnik89/messenger/pub-sub/internal/consumer"
+	"github.com/zoninnik89/messenger/pub-sub/internal/logging"
+	service2 "github.com/zoninnik89/messenger/pub-sub/internal/service"
 	zap "go.uber.org/zap"
 	"google.golang.org/grpc"
 	"net"
@@ -66,8 +66,8 @@ func main() {
 		}
 	}(l)
 
-	service := s.NewPubSubService()
-	s.NewGrpcHandler(grpcServer, service)
+	service := service2.NewPubSubService()
+	service2.NewGrpcHandler(grpcServer, service)
 
 	logger.Info("Starting HTTP server", zap.String("port", grpcAddress))
 

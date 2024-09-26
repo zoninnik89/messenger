@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/zoninnik89/messenger/pub-sub/types"
+	"github.com/zoninnik89/messenger/pub-sub/internal/types"
 	"sync"
 )
 

@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/zoninnik89/messenger/pub-sub/types"
+	"github.com/zoninnik89/messenger/pub-sub/internal/logging"
+	"github.com/zoninnik89/messenger/pub-sub/internal/types"
+	"github.com/zoninnik89/messenger/pub-sub/internal/utils"
 	"strings"
 
 	pb "github.com/zoninnik89/messenger/common/api"
-	"github.com/zoninnik89/messenger/pub-sub/logging"
-	"github.com/zoninnik89/messenger/pub-sub/utils"
 	"go.uber.org/zap"
 )
 

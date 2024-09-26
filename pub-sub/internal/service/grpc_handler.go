@@ -2,7 +2,7 @@ package service
 
 import (
 	pb "github.com/zoninnik89/messenger/common/api"
-	"github.com/zoninnik89/messenger/pub-sub/types"
+	"github.com/zoninnik89/messenger/pub-sub/internal/types"
 	"google.golang.org/grpc"
 )
 

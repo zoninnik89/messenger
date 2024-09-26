@@ -9,12 +9,16 @@ var (
 	KafkaServerAddress = common.EnvString("KAFKA_SERVER_ADDRESS", "localhost:9092")
 )
 
-func NewKafkaConsumer() (*kafka.Consumer, error) {
+func NewKafkaConsumer(
+	kafkaPort int,
+	consumerID string,
+	consumerGroupID string,
+) (*kafka.Consumer, error) {
 
 	configMap := &kafka.ConfigMap{
-		"bootstrap.servers": KafkaServerAddress,
-		"client.id":         "pub-sub-consumer",
-		"group.id":          "pub-sub-group",
+		"bootstrap.servers": kafkaPort,
+		"client.id":         consumerID,
+		"group.id":          consumerGroupID,
 	}
 
 	c, err := kafka.NewConsumer(configMap)

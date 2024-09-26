@@ -1,0 +1,8 @@
+env: "local"
+grpc:
+  port: 2000
+  timeout: 1h
+kafka:
+  port: 9092
+  messages_consumer_id: "pub-sub-consumer"
+  messages_consumer_group: "pub-sub-group"
