@@ -117,29 +117,84 @@ func TestRegisterLogin_Login_RegisterWithNoPassword(t *testing.T) {
 	assert.ErrorContains(t, err, "password required")
 }
 
-func TestRegisterLogin_Login_LoginEmptyApp(t *testing.T) {
+func TestLogin_FailCases(t *testing.T) {
 	ctx, st := suite.New(t)
 
-	email := gofakeit.Email()
-	pass := randomFakePassword()
+	tests := []struct {
+		name        string
+		email       string
+		pass        string
+		appID       int32
+		expectedErr string
+	}{
+		{
+			name:        "Login with empty email",
+			email:       "",
+			pass:        randomFakePassword(),
+			appID:       appID,
+			expectedErr: "email required",
+		},
+		{
+			name:        "Login with empty password",
+			email:       gofakeit.Email(),
+			pass:        "",
+			appID:       appID,
+			expectedErr: "password required",
+		},
+		{
+			name:        "Login with empty email and password",
+			email:       "",
+			pass:        "",
+			appID:       appID,
+			expectedErr: "email required",
+		},
+		{
+			name:        "Login with non-matching email",
+			email:       gofakeit.Email(),
+			pass:        randomFakePassword(),
+			appID:       appID,
+			expectedErr: "invalid email or password",
+		},
+		{
+			name:        "Login with non-matching password",
+			email:       gofakeit.Email(),
+			pass:        randomFakePassword(),
+			appID:       appID,
+			expectedErr: "invalid email or password",
+		},
+		{
+			name:        "Login with non-matching password",
+			email:       gofakeit.Email(),
+			pass:        randomFakePassword(),
+			appID:       emptyAdID,
+			expectedErr: "app id required",
+		},
+	}
 
-	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
-		Email:    email,
-		Password: pass,
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			email := gofakeit.Email()
+			pass := randomFakePassword()
 
-	require.NoError(t, err)
-	assert.NotEmpty(t, respReg.GetUserId())
+			respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
+				Email:    email,
+				Password: pass,
+			})
 
-	loginResp, err := st.AuthClient.Login(ctx, &pb.LoginRequest{
-		Email:    email,
-		Password: pass,
-		AppId:    emptyAdID,
-	})
+			require.NoError(t, err)
+			assert.NotEmpty(t, respReg.GetUserId())
 
-	require.Error(t, err)
-	assert.Empty(t, loginResp.GetToken())
-	assert.ErrorContains(t, err, "app id required")
+			respLogin, err := st.AuthClient.Login(ctx, &pb.LoginRequest{
+				Email:    tt.email,
+				Password: tt.pass,
+				AppId:    tt.appID,
+			})
+
+			require.Error(t, err)
+			assert.Empty(t, respLogin.GetToken())
+			assert.ErrorContains(t, err, tt.expectedErr)
+		})
+	}
 }
 
 func randomFakePassword() string {

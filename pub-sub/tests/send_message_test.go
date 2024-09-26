@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	pb "github.com/zoninnik89/messenger/common/api"
 	"github.com/zoninnik89/messenger/pub-sub/internal/service"
-	"github.com/zoninnik89/messenger/pub-sub/internal/utils"
+	"github.com/zoninnik89/messenger/pub-sub/internal/storage"
 	mocks "github.com/zoninnik89/messenger/pub-sub/tests/mocks"
 	"go.uber.org/zap/zaptest"
 	"testing"
@@ -19,7 +19,7 @@ func TestSubscribe_MessageSent(t *testing.T) {
 
 	// Create the PubSubService and test the Subscribe method
 	pubSubSvs := &service.PubSubService{
-		Chats:  utils.NewAsyncMap(),
+		Chats:  storage.NewAsyncMap(),
 		Logger: zaptest.NewLogger(t).Sugar(),
 	}
 
@@ -58,7 +58,7 @@ func TestSubscribe_MessageSentFailed(t *testing.T) {
 
 	// Create the PubSubService and test the Subscribe method
 	pubSubSvs := &service.PubSubService{
-		Chats:  utils.NewAsyncMap(),
+		Chats:  storage.NewAsyncMap(),
 		Logger: zaptest.NewLogger(t).Sugar(),
 	}
 

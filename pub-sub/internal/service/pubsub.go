@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/zoninnik89/messenger/pub-sub/internal/logging"
+	"github.com/zoninnik89/messenger/pub-sub/internal/storage"
 	"github.com/zoninnik89/messenger/pub-sub/internal/types"
-	"github.com/zoninnik89/messenger/pub-sub/internal/utils"
 	"strings"
 
 	pb "github.com/zoninnik89/messenger/common/api"
@@ -14,18 +15,19 @@ import (
 )
 
 type PubSubService struct {
-	Chats      *utils.AsyncMap
+	Chats      *storage.AsyncMap
 	Logger     *zap.SugaredLogger
 	chanBuffer int
 }
 
 func NewPubSubService(chanBuffer int) *PubSubService {
-	return &PubSubService{Chats: utils.NewAsyncMap(), Logger: logging.GetLogger().Sugar(), chanBuffer: chanBuffer}
+	return &PubSubService{Chats: storage.NewAsyncMap(), Logger: logging.GetLogger().Sugar(), chanBuffer: chanBuffer}
 }
 
-const (
-	ErrChatNotExists         = "chat not exists"
-	ErrNoChatSubscribers     = "no chat subscribers"
+var (
+	ErrChatNotExists         = errors.New("chat not exists")
+	ErrNoChatSubscribers     = errors.New("no chat subscribers")
+	ErrClientNotFound        = errors.New("client not found")
 	SuccessfullyConsumedResp = "message was sent to all recipients"
 )
 
@@ -70,7 +72,10 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 	msgSlice := strings.Split(string(msg.Value), ",")
 	chatID, senderID, messageID, messageText, sentTime := msgSlice[0], msgSlice[1], msgSlice[2], msgSlice[3], msgSlice[4]
 
-	clients := p.Chats.Get(chatID)
+	clients, err := p.Chats.Get(chatID)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, ErrChatNotExists)
+	}
 
 	// If there are no available recipients
 	if clients.Size() == 0 {
@@ -93,5 +98,11 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 }
 
 func (p *PubSubService) removeClient(chat string, client *types.Client) {
-	p.Chats.Remove(chat, client)
+	var op = "service.RemoveClient"
+
+	err := p.Chats.Remove(chat, client)
+	if err != nil {
+		p.Logger.Errorw("op", op, "err", ErrClientNotFound)
+
+	}
 }

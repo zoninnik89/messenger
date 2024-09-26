@@ -9,13 +9,16 @@ import (
 )
 
 type Config struct {
-	Env   string      `yaml:"env" env-default:"local"`
-	GRPC  GRPCConfig  `yaml:"grpc"`
-	kafka KafkaConfig `yaml:"kafka"`
+	Env     string        `yaml:"env" env-default:"local"`
+	GRPC    GRPCConfig    `yaml:"grpc"`
+	Kafka   KafkaConfig   `yaml:"kafka"`
+	Consul  ConsulConfig  `yaml:"consul"`
+	Storage StorageConfig `yaml:"storage"`
 }
 
 type GRPCConfig struct {
 	Port    int           `yaml:"port"`
+	Name    string        `yaml:"name"`
 	Timeout time.Duration `yaml:"timeout"`
 }
 
@@ -23,6 +26,14 @@ type KafkaConfig struct {
 	Port          int    `yaml:"port"`
 	ConsumerID    string `yaml:"consumer_id"`
 	ConsumerGroup string `yaml:"consumer_group"`
+}
+
+type ConsulConfig struct {
+	Port int `yaml:"port"`
+}
+
+type StorageConfig struct {
+	ChanBuffer int `yaml:"chan_buffer"`
 }
 
 func MustLoad() *Config {

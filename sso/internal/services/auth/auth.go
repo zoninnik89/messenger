@@ -54,7 +54,7 @@ func (a *Auth) Login(
 	password string,
 	appID int,
 ) (string, error) {
-	const op = "Auth.Login"
+	const op = "auth.Login"
 
 	a.logger.Info("attempting to login a user")
 
@@ -106,7 +106,7 @@ func (a *Auth) RegisterNewUser(
 	email string,
 	password string,
 ) (userID int64, err error) {
-	const op = "Auth.RegisterNewUser"
+	const op = "auth.RegisterNewUser"
 
 	a.logger.Info("registering new user")
 	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

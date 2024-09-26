@@ -1,8 +1,13 @@
 env: "local"
 grpc:
   port: 2000
+  name: "pub-sub"
   timeout: 1h
 kafka:
   port: 9092
   messages_consumer_id: "pub-sub-consumer"
   messages_consumer_group: "pub-sub-group"
+consul:
+  port: 8500
+storage:
+  chan_buffer: 500

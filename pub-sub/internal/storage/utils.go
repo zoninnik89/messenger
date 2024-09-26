@@ -1,7 +1,11 @@
-package utils
+package storage
 
 import (
+	"fmt"
+	_ "github.com/zoninnik89/messenger/pub-sub/internal/service"
 	"github.com/zoninnik89/messenger/pub-sub/internal/types"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"sync"
 )
 
@@ -62,21 +66,26 @@ func (m *AsyncMap) Add(key string, value *types.Client) {
 }
 
 // Get the slice of values for the given key
-func (m *AsyncMap) Get(key string) *HashSet {
+func (m *AsyncMap) Get(key string) (*HashSet, error) {
+	var op = "storage.Get"
+
 	chat, ok := m.store.Load(key)
 	if !ok {
-		return &HashSet{}
+		return &HashSet{}, fmt.Errorf("%s: %w", op, status.Error(codes.NotFound, "key not found"))
 	}
 
 	// Return a copy of the slice to avoid race conditions
-	return chat.(*HashSet)
+	return chat.(*HashSet), nil
 }
 
-func (m *AsyncMap) Remove(key string, client *types.Client) {
+func (m *AsyncMap) Remove(key string, client *types.Client) error {
+	var op = "storage.Remove"
+
 	chat, ok := m.store.Load(key)
 	if !ok {
-		return
+		return fmt.Errorf("%s: %w", op, status.Error(codes.NotFound, "client not found"))
 	}
 
 	chat.(*HashSet).Remove(client)
+	return nil
 }

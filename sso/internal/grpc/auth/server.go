@@ -32,7 +32,7 @@ func (s *serverAPI) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginR
 	token, err := s.service.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
+			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
 		}
 
 		if errors.Is(err, auth.ErrInvalidAppID) {
