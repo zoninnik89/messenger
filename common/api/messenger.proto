@@ -4,6 +4,34 @@ option go_package = "https://github.com/zoninnik89/messenger/common/api";
 
 package api;
 
+// SSO
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
+
+message RegisterRequest {
+  string email = 1; // Email of a user to be registered.
+  string password = 2; // Password of a user to be registered.
+}
+
+message RegisterResponse {
+  int64 user_id = 1; // User ID of the registered user.
+}
+
+message LoginRequest {
+  string email = 1; // Email of a user to be logged in.
+  string password = 2; // Password of a user to be logged in.
+  int32 app_id = 3; // ID of the app to be logged in.
+}
+
+message LoginResponse {
+  string token = 1; // Auth token of the logged in user.
+}
+
+// Pub-Sub
+
 service PubSubService {
   // Client subscribes to a chat and receives messages via streaming.
   rpc Subscribe(SubscribeRequest) returns (stream MessageResponse);
@@ -13,18 +41,19 @@ service PubSubService {
 }
 
 message Message {
-  string SenderID = 2;
-  string SenderName = 3;
-  string MessageText = 4;
-  int64 timestamp = 5;
+  string chat_id = 1;
+  string sender_id = 2;
+  string message_id = 3;
+  string message_text = 4;
+  string sent_ts = 5;
 }
 
 message SubscribeRequest {
-  string chat = 1;
+  string chat_id = 1;
 }
 
 message PublishRequest {
-  string chat = 1;
+  string chat_id = 1;
   Message message = 2;
 }
 
@@ -34,4 +63,32 @@ message PublishResponse {
 
 message MessageResponse {
   Message message = 1;
+}
+
+// Chat History
+
+service ChatHistoryService {
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+  rpc SendMessageReadEvent(SendMessageReadEventRequest) returns (SendMessageReadEventResponse);
+}
+
+message GetMessagesRequest {
+  string chat_id = 1;
+  string from_ts = 2;
+  string to_ts = 3;
+}
+
+message GetMessagesResponse {
+  repeated Message message = 1;
+}
+
+message SendMessageReadEventRequest {
+  string chat_id = 1;
+  string message_id = 2;
+  string read_by_user_id = 3;
+  string read_at = 4;
+}
+
+message SendMessageReadEventResponse {
+  string status = 1;
 }

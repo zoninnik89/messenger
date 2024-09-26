@@ -4,4 +4,6 @@ use (
 	./chat-client
 	./common
 	./pub-sub
+	./chat-history
+	sso
 )
