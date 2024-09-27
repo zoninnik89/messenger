@@ -1,4 +1,4 @@
-package tests
+package old
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	pb "github.com/zoninnik89/messenger/common/api"
 	"github.com/zoninnik89/messenger/pub-sub/internal/service"
 	"github.com/zoninnik89/messenger/pub-sub/internal/storage"
-	mocks "github.com/zoninnik89/messenger/pub-sub/tests/mocks"
+	"github.com/zoninnik89/messenger/pub-sub/tests/old/mocks"
 	"go.uber.org/zap/zaptest"
 	"testing"
 	"time"
