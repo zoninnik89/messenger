@@ -1,0 +1,14 @@
+FROM confluentinc/cp-kafka:latest
+
+USER root
+
+# Copy the Kafka topic creation script into the container
+COPY create-kafka-topic.sh /tmp/create-kafka-topic.sh
+COPY run-kafka.sh /tmp/run-kafka.sh
+
+# Give execute permissions to the script
+RUN chmod +x /tmp/create-kafka-topic.sh
+RUN chmod +x /tmp/run-kafka.sh
+
+# Run Kafka with the script to create the topic
+CMD ["/bin/bash", "/tmp/run-kafka.sh"]

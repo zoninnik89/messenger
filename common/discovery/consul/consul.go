@@ -27,14 +27,14 @@ func NewRegistry(host string, port int) (*Registry, error) {
 func (registry *Registry) Register(
 	ctx context.Context,
 	instanceID string,
-	host string,
-	serviceName string,
+	address string,
 	hostPort int,
+	serviceName string,
 ) error {
 
 	return registry.client.Agent().ServiceRegister(&consul.AgentServiceRegistration{
 		ID:      instanceID,
-		Address: host,
+		Address: address,
 		Port:    hostPort,
 		Name:    serviceName,
 		Check: &consul.AgentServiceCheck{

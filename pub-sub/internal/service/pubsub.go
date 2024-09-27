@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	pb "github.com/zoninnik89/messenger/common/api"
 	"github.com/zoninnik89/messenger/pub-sub/internal/logging"
 	"github.com/zoninnik89/messenger/pub-sub/internal/storage"
 	"github.com/zoninnik89/messenger/pub-sub/internal/types"
-	"strings"
-
-	pb "github.com/zoninnik89/messenger/common/api"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 type PubSubService struct {
@@ -25,10 +24,11 @@ func NewPubSubService(chanBuffer int) *PubSubService {
 }
 
 var (
-	ErrChatNotExists         = errors.New("chat not exists")
-	ErrNoChatSubscribers     = errors.New("no chat subscribers")
-	ErrClientNotFound        = errors.New("client not found")
-	SuccessfullyConsumedResp = "message was sent to all recipients"
+	ErrChatNotExists       = errors.New("chat not exists")
+	ErrNoChatSubscribers   = errors.New("no chat subscribers")
+	ErrClientNotFound      = errors.New("client not found")
+	ErrNoMessageID         = errors.New("no message ID")
+	ErrMessageMissingField = errors.New("message misses one of the fields")
 )
 
 func (p *PubSubService) Subscribe(
@@ -47,14 +47,14 @@ func (p *PubSubService) Subscribe(
 	for {
 		select {
 		case msg := <-*client.MessageChannel:
-			p.Logger.Infow("received message from client channel", "message", msg.Message)
+			p.Logger.Infow("op", op, "received message from client channel", "message", msg.Message)
 			if err := stream.Send(msg); err != nil {
-				p.Logger.Errorw("error sending message to client", "err", err)
+				p.Logger.Errorw("op", op, "error sending message to client", "err", err)
 				p.removeClient(chatID, client) // Removing the client from the Async map
 				return fmt.Errorf("%s: %w", op, err)
 			}
 		case <-stream.Context().Done():
-			p.Logger.Infow("Client disconnected from chat", "chat", chatID)
+			p.Logger.Infow("op", op, "Client disconnected from chat", "chat", chatID)
 			p.removeClient(chatID, client) // Removing the client from the Async map
 			return nil
 		}
@@ -66,20 +66,36 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 
 	msg, err := consumer.ReadMessage(-1)
 	if err != nil {
-		p.Logger.Fatalw("failed to read message", "err", err)
+		p.Logger.Fatalw("op", op, "failed to read message", "err", err)
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
-	msgSlice := strings.Split(string(msg.Value), ",")
-	chatID, senderID, messageID, messageText, sentTime := msgSlice[0], msgSlice[1], msgSlice[2], msgSlice[3], msgSlice[4]
+	var deserializedMessage pb.Message
+	if err := proto.Unmarshal(msg.Value, &deserializedMessage); err != nil {
+		p.Logger.Fatalw("op", op, "failed to unmarshal message", "err", err)
+	}
+
+	messageID := deserializedMessage.GetMessageId()
+
+	p.Logger.Infow("op", op, "validating message:", "message", messageID)
+
+	if err := p.validateMessage(&deserializedMessage); err != nil {
+		p.Logger.Errorw("op", op, "invalid message", "err", err)
+		return "", fmt.Errorf("%s: error validating message %v: %w", op, messageID, err)
+	}
+
+	chatID := deserializedMessage.GetChatId()
+	senderID := deserializedMessage.GetSenderId()
+	messageText := deserializedMessage.GetMessageText()
+	sentTime := deserializedMessage.GetSentTs()
 
 	clients, err := p.Chats.Get(chatID)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, ErrChatNotExists)
+		return "", fmt.Errorf("%s: error validating message %v: %w", op, messageID, ErrChatNotExists)
 	}
 
 	// If there are no available recipients
 	if clients.Size() == 0 {
-		return "", fmt.Errorf("%s: %w", op, ErrNoChatSubscribers)
+		return "", fmt.Errorf("%s: error validating message %v: %w", op, messageID, ErrNoChatSubscribers)
 	}
 
 	// Send the message to all clients
@@ -92,17 +108,37 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 			SentTs:      sentTime,
 		}}
 	}
-	p.Logger.Infow("message successfully consumed", "chatID", chatID, "messageID", messageID)
+	p.Logger.Infow("op", op, "message successfully consumed", "chatID", chatID, "messageID", messageID)
 
-	return SuccessfullyConsumedResp, nil
+	return messageID, nil
 }
 
-func (p *PubSubService) removeClient(chat string, client *types.Client) {
+func (p *PubSubService) removeClient(chatID string, client *types.Client) {
 	var op = "service.RemoveClient"
 
-	err := p.Chats.Remove(chat, client)
+	err := p.Chats.Remove(chatID, client)
 	if err != nil {
 		p.Logger.Errorw("op", op, "err", ErrClientNotFound)
 
 	}
+}
+
+func (p *PubSubService) validateMessage(msg *pb.Message) error {
+	op := "service.validateMessage"
+
+	chatID := msg.GetChatId()
+	senderID := msg.GetSenderId()
+	messageID := msg.GetMessageId()
+	messageText := msg.GetMessageText()
+	sentTime := msg.GetSentTs()
+
+	if messageID == "" {
+		return fmt.Errorf("%s: %w", op, ErrNoMessageID)
+	}
+
+	if chatID == "" || senderID == "" || messageText == "" || sentTime == "" {
+		return fmt.Errorf("%s: error validating message %v: %w", op, messageID, ErrMessageMissingField)
+	}
+
+	return nil
 }

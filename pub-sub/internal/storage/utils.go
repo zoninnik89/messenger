@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	_ "github.com/zoninnik89/messenger/pub-sub/internal/service"
 	"github.com/zoninnik89/messenger/pub-sub/internal/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
