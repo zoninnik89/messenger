@@ -38,7 +38,7 @@ func main() {
 	go func() {
 		for {
 			if err := registry.HealthCheck(instanceID); err != nil {
-				logger.Warn("Failed to health check", zap.Error(err))
+				logger.Warn("failed to health check", zap.Error(err))
 			}
 			time.Sleep(time.Second * 1)
 		}
@@ -60,7 +60,7 @@ func main() {
 		panic(err)
 	}
 
-	topics := []string{"messages", "read_events"}
+	topics := []string{"messages"}
 	err = consumer.SubscribeTopics(topics, nil)
 	if err != nil {
 		panic(err)

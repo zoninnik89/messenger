@@ -8,11 +8,11 @@ import (
 	producer "github.com/zoninnik89/messenger/pub-sub/tests/suite/mock-kafka-producer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/proto"
-	"log"
+	"io"
 	"net"
 	"strconv"
 	"testing"
+	"time"
 )
 
 const (
@@ -21,14 +21,14 @@ const (
 
 type Suite struct {
 	*testing.T
-	Cfg        *config.Config
-	AuthClient pb.AuthServiceClient
-	Queue      *producer.Producer
+	Cfg          *config.Config
+	PubSubClient pb.PubSubServiceClient
+	Queue        *producer.Producer
 }
 
 func New(t *testing.T) (context.Context, *Suite) {
 	t.Helper()
-	t.Parallel()
+	//t.Parallel()
 
 	cfg := config.MustLoadByPath("../config/local.yaml")
 	ctx, cancelCtx := context.WithTimeout(context.Background(), cfg.GRPC.Timeout)
@@ -41,16 +41,16 @@ func New(t *testing.T) (context.Context, *Suite) {
 	cc, err := grpc.NewClient(grpcAddress(cfg),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		t.Fatalf("grpc server connection failed: %v", err)
+		return nil, nil
 	}
 
 	p := producer.NewKafkaProducer()
 
 	return ctx, &Suite{
-		T:          t,
-		Cfg:        cfg,
-		AuthClient: pb.NewAuthServiceClient(cc),
-		Queue:      p,
+		T:            t,
+		Cfg:          cfg,
+		PubSubClient: pb.NewPubSubServiceClient(cc),
+		Queue:        p,
 	}
 }
 
@@ -58,29 +58,61 @@ func grpcAddress(cfg *config.Config) string {
 	return net.JoinHostPort(grpcHost, strconv.Itoa(cfg.GRPC.Port))
 }
 
-func (s *Suite) ProduceMessage(msg *pb.Message) {
-	log.Printf("Produce message request received")
-
-	serializedMessage, err := proto.Marshal(msg)
+func (s *Suite) SubscribeToChat(ctx context.Context, chat string, messages chan<- *pb.Message) {
+	stream, err := s.PubSubClient.Subscribe(context.Background(), &pb.SubscribeRequest{ChatId: chat})
 	if err != nil {
-		log.Fatalf("protobuf serialization error: %s", err)
+		return
+	}
+
+	// Continuously receive messages from the stream
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			// Server closed connection
+			break
+		}
+		if err != nil {
+			return
+		}
+
+		// Log the received message
+		messages <- msg.Message
+	}
+
+	close(messages)
+}
+
+func (s *Suite) SendMessage(
+	ctx context.Context,
+	messageID string,
+	chatID string,
+	senderID string,
+	messageText string,
+) error {
+	// publish message to the chat
+
+	msg := &pb.Message{
+		MessageId:   messageID,
+		SenderId:    senderID,
+		ChatId:      chatID,
+		MessageText: messageText,
+		SentTs:      strconv.FormatInt(time.Now().Unix(), 10),
 	}
 
 	deliveryChan := make(chan kafka.Event)
-	err = s.Queue.Publish(serializedMessage, "messages", nil, deliveryChan)
+	err := s.Queue.Publish(msg, "messages", nil, deliveryChan)
 
 	if err != nil {
-		log.Println("error publishing click event in Kafka", err)
+		return err
 	}
 
 	e := <-deliveryChan
-	m := e.(*kafka.Message)
+	dmsg := e.(*kafka.Message)
 
-	if m.TopicPartition.Error != nil {
-		log.Println("message was not published", "error", m.TopicPartition.Error)
-	} else {
-		log.Println("message successfully published", "message", m.TopicPartition, "time", m.Timestamp.String())
+	if dmsg.TopicPartition.Error != nil {
+		return dmsg.TopicPartition.Error
 	}
-	close(deliveryChan)
 
+	close(deliveryChan)
+	return nil
 }

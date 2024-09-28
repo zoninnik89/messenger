@@ -2,6 +2,8 @@ package producer
 
 import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	pb "github.com/zoninnik89/messenger/common/api"
+	"google.golang.org/protobuf/proto"
 	"log"
 )
 
@@ -24,14 +26,19 @@ func NewKafkaProducer() *Producer {
 	}
 }
 
-func (p *Producer) Publish(msg []byte, topic string, key []byte, deliveryChan chan kafka.Event) error {
+func (p *Producer) Publish(msg *pb.Message, topic string, key []byte, deliveryChan chan kafka.Event) error {
+	serialized, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
 	message := &kafka.Message{
-		Value:          msg,
+		Value:          serialized,
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Key:            key,
 	}
 
-	err := p.Producer.Produce(message, deliveryChan)
+	err = p.Producer.Produce(message, deliveryChan)
 
 	if err != nil {
 		return err

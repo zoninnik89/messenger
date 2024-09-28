@@ -102,6 +102,7 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 	for client := range clients.Store {
 		p.Logger.Infow("sending message to client", "chatID", chatID, "senderID", senderID, "messageID", messageID, "messageText", messageText, "sentTime", sentTime)
 		*client.MessageChannel <- &pb.MessageResponse{Message: &pb.Message{
+			ChatId:      chatID,
 			SenderId:    senderID,
 			MessageId:   messageID,
 			MessageText: messageText,
