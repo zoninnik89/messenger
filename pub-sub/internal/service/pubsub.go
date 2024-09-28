@@ -94,7 +94,7 @@ func (p *PubSubService) ConsumeMessage(ctx context.Context, consumer *kafka.Cons
 	}
 
 	// If there are no available recipients
-	if clients.Size() == 0 {
+	if clients.Size() <= 1 {
 		return "", fmt.Errorf("%s: error validating message %v: %w", op, messageID, ErrNoChatSubscribers)
 	}
 

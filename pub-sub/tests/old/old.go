@@ -7,7 +7,7 @@ import (
 	pb "github.com/zoninnik89/messenger/common/api"
 	"github.com/zoninnik89/messenger/pub-sub/internal/service"
 	"github.com/zoninnik89/messenger/pub-sub/internal/storage"
-	"github.com/zoninnik89/messenger/pub-sub/tests/old/mocks"
+	"github.com/zoninnik89/messenger/pub-sub/tests/mocks"
 	"go.uber.org/zap/zaptest"
 	"testing"
 	"time"
