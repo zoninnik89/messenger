@@ -31,22 +31,17 @@ var (
 	ErrMessageMissingField = errors.New("message misses one of the fields")
 )
 
-func (p *PubSubService) Subscribe(
-	chatID string,
-	stream pb.PubSubService_SubscribeServer,
-) error {
+func (p *PubSubService) Subscribe(userID string, stream pb.PubSubService_SubscribeServer) error {
 	var op = "service.Subscribe"
 
-	p.Logger.Infow("op", op, "chat ID", chatID)
+	p.Logger.Infow("op", op, "user ID", userID)
 	channel := make(chan *pb.MessageResponse, p.chanBuffer)
-	client := &types.Client{
-		MessageChannel: &channel,
-	}
-	p.Chats.Add(chatID, client)
+
+	p.Chats.Add(userID, channel)
 
 	for {
 		select {
-		case msg := <-*client.MessageChannel:
+		case msg := <-channel:
 			p.Logger.Infow("op", op, "received message from client channel", "message", msg.Message)
 			if err := stream.Send(msg); err != nil {
 				p.Logger.Errorw("op", op, "error sending message to client", "err", err)

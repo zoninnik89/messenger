@@ -11,6 +11,6 @@ type PubSubServiceInterface interface {
 	ConsumeMessage(ctx context.Context, consumer *kafka.Consumer) (string, error)
 }
 
-type Client struct {
-	MessageChannel *chan *pb.MessageResponse
-}
+//type Client struct {
+//	MessageChannel *chan *pb.MessageResponse
+//}

@@ -43,16 +43,16 @@ func (s *HashSet) Size() int {
 
 // Async Map
 
-type AsyncMap struct {
+type AsyncMapHashset struct {
 	store sync.Map
 }
 
-func NewAsyncMap() *AsyncMap {
+func NewAsyncMapHashset() *AsyncMap {
 	return &AsyncMap{}
 }
 
 // Add a value to the slice at the given key
-func (m *AsyncMap) Add(key string, value *types.Client) {
+func (m *AsyncMapHashset) Add(key string, value *types.Client) {
 	// Use LoadOrStore to get or initialize the slice
 	chat, _ := m.store.LoadOrStore(key, NewHashSet())
 
@@ -65,7 +65,7 @@ func (m *AsyncMap) Add(key string, value *types.Client) {
 }
 
 // Get the slice of values for the given key
-func (m *AsyncMap) Get(key string) (*HashSet, error) {
+func (m *AsyncMapHashset) Get(key string) (*HashSet, error) {
 	var op = "storage.Get"
 
 	chat, ok := m.store.Load(key)
@@ -77,7 +77,7 @@ func (m *AsyncMap) Get(key string) (*HashSet, error) {
 	return chat.(*HashSet), nil
 }
 
-func (m *AsyncMap) Remove(key string, client *types.Client) error {
+func (m *AsyncMapHashset) Remove(key string, client *types.Client) error {
 	var op = "storage.Remove"
 
 	chat, ok := m.store.Load(key)
