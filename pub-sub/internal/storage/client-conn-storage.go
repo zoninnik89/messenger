@@ -19,14 +19,14 @@ func NewAsyncMap() *AsyncMap {
 }
 
 // Add a value to the slice at the given key
-func (m *AsyncMap) Add(key string, value chan *pb.MessageResponse) {
+func (m *AsyncMap) Add(key string, value chan *pb.Message) {
 
 	m.store.Store(key, value)
 
 }
 
 // Get the slice of values for the given key
-func (m *AsyncMap) Get(key string) (chan *pb.MessageResponse, error) {
+func (m *AsyncMap) Get(key string) (chan *pb.Message, error) {
 	var op = "storage.Get"
 
 	channel, ok := m.store.Load(key)
@@ -35,7 +35,7 @@ func (m *AsyncMap) Get(key string) (chan *pb.MessageResponse, error) {
 	}
 
 	// Return a copy of the slice to avoid race conditions
-	return channel.(chan *pb.MessageResponse), nil
+	return channel.(chan *pb.Message), nil
 }
 
 func (m *AsyncMap) Remove(key string) error {

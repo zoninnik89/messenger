@@ -168,7 +168,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PubSubServiceClient interface {
 	// Client subscribes to a chat and receives messages via streaming.
-	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageResponse], error)
+	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Message], error)
 	// Publish a message to a chat.
 	Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
 }
@@ -181,13 +181,13 @@ func NewPubSubServiceClient(cc grpc.ClientConnInterface) PubSubServiceClient {
 	return &pubSubServiceClient{cc}
 }
 
-func (c *pubSubServiceClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageResponse], error) {
+func (c *pubSubServiceClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Message], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &PubSubService_ServiceDesc.Streams[0], PubSubService_Subscribe_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[SubscribeRequest, MessageResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[SubscribeRequest, Message]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (c *pubSubServiceClient) Subscribe(ctx context.Context, in *SubscribeReques
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type PubSubService_SubscribeClient = grpc.ServerStreamingClient[MessageResponse]
+type PubSubService_SubscribeClient = grpc.ServerStreamingClient[Message]
 
 func (c *pubSubServiceClient) Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -215,7 +215,7 @@ func (c *pubSubServiceClient) Publish(ctx context.Context, in *PublishRequest, o
 // for forward compatibility.
 type PubSubServiceServer interface {
 	// Client subscribes to a chat and receives messages via streaming.
-	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[MessageResponse]) error
+	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[Message]) error
 	// Publish a message to a chat.
 	Publish(context.Context, *PublishRequest) (*PublishResponse, error)
 	mustEmbedUnimplementedPubSubServiceServer()
@@ -228,7 +228,7 @@ type PubSubServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPubSubServiceServer struct{}
 
-func (UnimplementedPubSubServiceServer) Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[MessageResponse]) error {
+func (UnimplementedPubSubServiceServer) Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[Message]) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
 func (UnimplementedPubSubServiceServer) Publish(context.Context, *PublishRequest) (*PublishResponse, error) {
@@ -260,11 +260,11 @@ func _PubSubService_Subscribe_Handler(srv interface{}, stream grpc.ServerStream)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(PubSubServiceServer).Subscribe(m, &grpc.GenericServerStream[SubscribeRequest, MessageResponse]{ServerStream: stream})
+	return srv.(PubSubServiceServer).Subscribe(m, &grpc.GenericServerStream[SubscribeRequest, Message]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type PubSubService_SubscribeServer = grpc.ServerStreamingServer[MessageResponse]
+type PubSubService_SubscribeServer = grpc.ServerStreamingServer[Message]
 
 func _PubSubService_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PublishRequest)
