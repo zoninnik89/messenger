@@ -1,0 +1,14 @@
+env: "local"
+grpc:
+  addr: "localhost"
+  port: 2001
+  name: "chat-client"
+  timeout: 1h
+kafka:
+  port: 9092
+  addr: "localhost"
+  delivery-timeout-ms: "1"
+  acks: "all" #0-no ack, 1-leader, all,
+  enable-idempotence: "false"
+consul:
+  port: 8500

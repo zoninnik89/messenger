@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/zoninnik89/messenger/chat-client/logging"
-	kafkaProducer "github.com/zoninnik89/messenger/chat-client/producer"
+	"github.com/zoninnik89/messenger/chat-client/internal/logging"
+	kafkaProducer "github.com/zoninnik89/messenger/chat-client/internal/producer"
+	"github.com/zoninnik89/messenger/chat-client/internal/service"
 	common "github.com/zoninnik89/messenger/common"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
@@ -70,7 +71,7 @@ func main() {
 	}
 	defer kp.Producer.Flush(10)
 
-	client := NewChatClient(conn, kp)
+	client := service.NewChatClient(conn, kp)
 
 	go client.SubscribeToChat("test", "chatroom1")
 

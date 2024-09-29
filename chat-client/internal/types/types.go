@@ -1,4 +1,4 @@
-package main
+package types
 
 import pb "github.com/zoninnik89/messenger/common/api"
 
