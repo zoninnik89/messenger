@@ -7,10 +7,10 @@ import (
 )
 
 type PubSubServiceInterface interface {
-	Subscribe(chatID string, stream pb.PubSubService_SubscribeServer) error
-	ConsumeMessage(ctx context.Context, consumer *kafka.Consumer) (string, error)
+	Subscribe(userID string, stream pb.PubSubService_SubscribeServer) error
+	ConsumeAndSendoutMessage(ctx context.Context, consumer *kafka.Consumer) (string, error)
 }
 
-type Client struct {
-	MessageChannel *chan *pb.MessageResponse
-}
+//type Client struct {
+//	MessageChannel *chan *pb.MessageResponse
+//}

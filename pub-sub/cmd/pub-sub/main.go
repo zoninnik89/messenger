@@ -6,11 +6,11 @@ import (
 	"github.com/zoninnik89/messenger/common/discovery/consul"
 	"github.com/zoninnik89/messenger/pub-sub/internal/app"
 	"github.com/zoninnik89/messenger/pub-sub/internal/config"
+	c "github.com/zoninnik89/messenger/pub-sub/internal/consumer"
 	"github.com/zoninnik89/messenger/pub-sub/internal/logging"
 	zap "go.uber.org/zap"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 )
@@ -20,9 +20,9 @@ func main() {
 	logger := logging.InitLogger()
 	defer logging.Sync()
 
-	logger.Info("starting sso service")
+	logger.Info("starting pub-sub service")
 
-	registry, err := consul.NewRegistry(cfg.Env, cfg.Consul.Port)
+	registry, err := consul.NewRegistry(cfg.GRPC.Address, cfg.Consul.Port)
 	if err != nil {
 		logger.Panic("failed to connect to Consul", zap.Error(err))
 		panic(err)
@@ -30,7 +30,7 @@ func main() {
 
 	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(cfg.GRPC.Name)
-	if err := registry.Register(ctx, instanceID, cfg.Env, cfg.GRPC.Name, cfg.GRPC.Port); err != nil {
+	if err := registry.Register(ctx, instanceID, cfg.GRPC.Address, cfg.GRPC.Port, cfg.GRPC.Name); err != nil {
 		logger.Panic("failed to register service", zap.Error(err))
 		panic(err)
 	}
@@ -38,7 +38,7 @@ func main() {
 	go func() {
 		for {
 			if err := registry.HealthCheck(instanceID); err != nil {
-				logger.Warn("Failed to health check", zap.Error(err))
+				logger.Warn("failed to health check", zap.Error(err))
 			}
 			time.Sleep(time.Second * 1)
 		}
@@ -53,8 +53,22 @@ func main() {
 
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 
+	logger.Info("starting Kafka Consumer")
+	consumer, err := c.NewKafkaConsumer()
+	if err != nil {
+		logger.Panic("failed to create kafka consumer", zap.Error(err))
+		panic(err)
+	}
+
+	topics := []string{"messages"}
+	err = consumer.SubscribeTopics(topics, nil)
+	if err != nil {
+		panic(err)
+	}
+
 	application := app.NewApp(cfg.GRPC.Port, cfg.Storage.ChanBuffer)
-	go application.GRPCsrv.MustRun(ctxWithCancel, strconv.Itoa(cfg.Kafka.Port), cfg.Kafka.ConsumerID, cfg.Kafka.ConsumerGroup)
+	go application.GRPCsrv.MustRun()
+	go application.GRPCsrv.MustConsume(ctxWithCancel, consumer)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)

@@ -34,10 +34,7 @@ message LoginResponse {
 
 service PubSubService {
   // Client subscribes to a chat and receives messages via streaming.
-  rpc Subscribe(SubscribeRequest) returns (stream MessageResponse);
-
-  // Publish a message to a chat.
-  rpc Publish(PublishRequest) returns (PublishResponse);
+  rpc Subscribe(SubscribeRequest) returns (stream Message);
 }
 
 message Message {
@@ -49,20 +46,26 @@ message Message {
 }
 
 message SubscribeRequest {
-  string chat_id = 1;
+  string user_id = 1;
 }
 
-message PublishRequest {
-  string chat_id = 1;
-  Message message = 2;
+// Chat client
+
+service ChatClient{
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc GetMessagesStream(GetMessagesStreamRequest) returns (stream Message);
 }
 
-message PublishResponse {
+message SendMessageRequest {
+  Message message = 1;
+}
+
+message SendMessageResponse {
   string status = 1;
 }
 
-message MessageResponse {
-  Message message = 1;
+message GetMessagesStreamRequest {
+  string user_id = 1;
 }
 
 // Chat History

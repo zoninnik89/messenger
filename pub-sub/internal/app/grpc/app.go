@@ -3,7 +3,7 @@ package grpcapp
 import (
 	"context"
 	"fmt"
-	c "github.com/zoninnik89/messenger/chat-history/consumer"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	pubsubgrpc "github.com/zoninnik89/messenger/pub-sub/internal/grpc"
 	"github.com/zoninnik89/messenger/pub-sub/internal/logging"
 	"github.com/zoninnik89/messenger/pub-sub/internal/types"
@@ -32,55 +32,48 @@ func NewApp(
 		logger:     l,
 		grpcServer: grpcServer,
 		port:       port,
+		service:    pubSubService,
 	}
 }
 
-func (a *App) MustRun(ctx context.Context, kafkaPort string, kafkaConsumerID string, kafkaConsumerGroup string) {
+func (a *App) MustRun() {
 
 	if err := a.Run(); err != nil {
 		panic(err)
 	}
+}
 
-	a.logger.Info("Starting Kafka Consumer")
-	consumer, err := c.NewKafkaConsumer(kafkaPort, kafkaConsumerID, kafkaConsumerGroup)
-	if err != nil {
-		a.logger.Panic("failed to create kafka consumer", zap.Error(err))
-		panic(err)
-	}
+func (a *App) MustConsume(ctx context.Context, consumer *kafka.Consumer) {
+	const op = "grpcapp.MustConsume"
 
-	topics := []string{"messages", "read_events"}
-	err = consumer.SubscribeTopics(topics, nil)
-
-	if err != nil {
-		panic(err)
-	}
-
-	go func() {
-		status, err := a.service.ConsumeMessage(ctx, consumer)
+	for {
+		status, err := a.service.ConsumeAndSendoutMessage(ctx, consumer)
 		if err != nil {
-			a.logger.Warn("error consuming a message", zap.Error(err))
+			a.logger.Warn("error consuming a message", "op", op, err, zap.Error(err))
 		} else {
-			a.logger.Info("Message was consumed with status", zap.String("message", status))
+			a.logger.Info("message was consumed with status", "op", op, err, zap.String("message", status))
 		}
 
 		time.Sleep(time.Second * 1)
-	}()
+	}
 }
 
 func (a *App) Run() error {
 	const op = "grpcapp.Run"
-	a.logger.Infow("starting grpc server", "op", op, "port", a.port)
+	a.logger.Infow("starting grpc server at", "op", op, "port", a.port)
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
 	if err != nil {
-		a.logger.Fatalw("failed to listen", "op", op, "error", err)
+		a.logger.Fatalw("failed to listen", "op", op, "err", err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	a.logger.Infow("grpc server is running", "add", l.Addr().String())
+	addr := l.Addr().String()
+
+	a.logger.Infow("grpc server is running", "op", op, "addr", addr)
 
 	if err := a.grpcServer.Serve(l); err != nil {
-		a.logger.Fatalw("failed to serve", "op", op, "error", err)
+		a.logger.Fatalw("failed to serve", "op", op, "err", err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -89,6 +82,6 @@ func (a *App) Run() error {
 
 func (a *App) Stop() {
 	const op = "grpcapp.Stop"
-	a.logger.Infow("stopping grpc server")
+	a.logger.Infow("stopping grpc server", "op", op, "port", a.port)
 	a.grpcServer.GracefulStop()
 }

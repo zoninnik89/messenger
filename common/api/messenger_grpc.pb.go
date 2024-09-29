@@ -160,7 +160,6 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	PubSubService_Subscribe_FullMethodName = "/api.PubSubService/Subscribe"
-	PubSubService_Publish_FullMethodName   = "/api.PubSubService/Publish"
 )
 
 // PubSubServiceClient is the client API for PubSubService service.
@@ -168,9 +167,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PubSubServiceClient interface {
 	// Client subscribes to a chat and receives messages via streaming.
-	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageResponse], error)
-	// Publish a message to a chat.
-	Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
+	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Message], error)
 }
 
 type pubSubServiceClient struct {
@@ -181,13 +178,13 @@ func NewPubSubServiceClient(cc grpc.ClientConnInterface) PubSubServiceClient {
 	return &pubSubServiceClient{cc}
 }
 
-func (c *pubSubServiceClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageResponse], error) {
+func (c *pubSubServiceClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Message], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &PubSubService_ServiceDesc.Streams[0], PubSubService_Subscribe_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[SubscribeRequest, MessageResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[SubscribeRequest, Message]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -198,26 +195,14 @@ func (c *pubSubServiceClient) Subscribe(ctx context.Context, in *SubscribeReques
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type PubSubService_SubscribeClient = grpc.ServerStreamingClient[MessageResponse]
-
-func (c *pubSubServiceClient) Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PublishResponse)
-	err := c.cc.Invoke(ctx, PubSubService_Publish_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
+type PubSubService_SubscribeClient = grpc.ServerStreamingClient[Message]
 
 // PubSubServiceServer is the server API for PubSubService service.
 // All implementations must embed UnimplementedPubSubServiceServer
 // for forward compatibility.
 type PubSubServiceServer interface {
 	// Client subscribes to a chat and receives messages via streaming.
-	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[MessageResponse]) error
-	// Publish a message to a chat.
-	Publish(context.Context, *PublishRequest) (*PublishResponse, error)
+	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[Message]) error
 	mustEmbedUnimplementedPubSubServiceServer()
 }
 
@@ -228,11 +213,8 @@ type PubSubServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPubSubServiceServer struct{}
 
-func (UnimplementedPubSubServiceServer) Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[MessageResponse]) error {
+func (UnimplementedPubSubServiceServer) Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[Message]) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
-}
-func (UnimplementedPubSubServiceServer) Publish(context.Context, *PublishRequest) (*PublishResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
 func (UnimplementedPubSubServiceServer) mustEmbedUnimplementedPubSubServiceServer() {}
 func (UnimplementedPubSubServiceServer) testEmbeddedByValue()                       {}
@@ -260,29 +242,11 @@ func _PubSubService_Subscribe_Handler(srv interface{}, stream grpc.ServerStream)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(PubSubServiceServer).Subscribe(m, &grpc.GenericServerStream[SubscribeRequest, MessageResponse]{ServerStream: stream})
+	return srv.(PubSubServiceServer).Subscribe(m, &grpc.GenericServerStream[SubscribeRequest, Message]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type PubSubService_SubscribeServer = grpc.ServerStreamingServer[MessageResponse]
-
-func _PubSubService_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PublishRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(PubSubServiceServer).Publish(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: PubSubService_Publish_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PubSubServiceServer).Publish(ctx, req.(*PublishRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
+type PubSubService_SubscribeServer = grpc.ServerStreamingServer[Message]
 
 // PubSubService_ServiceDesc is the grpc.ServiceDesc for PubSubService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -290,16 +254,155 @@ func _PubSubService_Publish_Handler(srv interface{}, ctx context.Context, dec fu
 var PubSubService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "api.PubSubService",
 	HandlerType: (*PubSubServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Publish",
-			Handler:    _PubSubService_Publish_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Subscribe",
 			Handler:       _PubSubService_Subscribe_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "api/messenger.proto",
+}
+
+const (
+	ChatClient_SendMessage_FullMethodName       = "/api.ChatClient/SendMessage"
+	ChatClient_GetMessagesStream_FullMethodName = "/api.ChatClient/GetMessagesStream"
+)
+
+// ChatClientClient is the client API for ChatClient service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ChatClientClient interface {
+	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
+	GetMessagesStream(ctx context.Context, in *GetMessagesStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Message], error)
+}
+
+type chatClientClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewChatClientClient(cc grpc.ClientConnInterface) ChatClientClient {
+	return &chatClientClient{cc}
+}
+
+func (c *chatClientClient) SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendMessageResponse)
+	err := c.cc.Invoke(ctx, ChatClient_SendMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClientClient) GetMessagesStream(ctx context.Context, in *GetMessagesStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Message], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ChatClient_ServiceDesc.Streams[0], ChatClient_GetMessagesStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[GetMessagesStreamRequest, Message]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ChatClient_GetMessagesStreamClient = grpc.ServerStreamingClient[Message]
+
+// ChatClientServer is the server API for ChatClient service.
+// All implementations must embed UnimplementedChatClientServer
+// for forward compatibility.
+type ChatClientServer interface {
+	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+	GetMessagesStream(*GetMessagesStreamRequest, grpc.ServerStreamingServer[Message]) error
+	mustEmbedUnimplementedChatClientServer()
+}
+
+// UnimplementedChatClientServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedChatClientServer struct{}
+
+func (UnimplementedChatClientServer) SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
+}
+func (UnimplementedChatClientServer) GetMessagesStream(*GetMessagesStreamRequest, grpc.ServerStreamingServer[Message]) error {
+	return status.Errorf(codes.Unimplemented, "method GetMessagesStream not implemented")
+}
+func (UnimplementedChatClientServer) mustEmbedUnimplementedChatClientServer() {}
+func (UnimplementedChatClientServer) testEmbeddedByValue()                    {}
+
+// UnsafeChatClientServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ChatClientServer will
+// result in compilation errors.
+type UnsafeChatClientServer interface {
+	mustEmbedUnimplementedChatClientServer()
+}
+
+func RegisterChatClientServer(s grpc.ServiceRegistrar, srv ChatClientServer) {
+	// If the following call pancis, it indicates UnimplementedChatClientServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ChatClient_ServiceDesc, srv)
+}
+
+func _ChatClient_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatClientServer).SendMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatClient_SendMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatClientServer).SendMessage(ctx, req.(*SendMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatClient_GetMessagesStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetMessagesStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ChatClientServer).GetMessagesStream(m, &grpc.GenericServerStream[GetMessagesStreamRequest, Message]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ChatClient_GetMessagesStreamServer = grpc.ServerStreamingServer[Message]
+
+// ChatClient_ServiceDesc is the grpc.ServiceDesc for ChatClient service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ChatClient_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "api.ChatClient",
+	HandlerType: (*ChatClientServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SendMessage",
+			Handler:    _ChatClient_SendMessage_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetMessagesStream",
+			Handler:       _ChatClient_GetMessagesStream_Handler,
 			ServerStreams: true,
 		},
 	},

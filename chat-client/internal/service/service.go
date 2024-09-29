@@ -1,11 +1,11 @@
-package main
+package service
 
 import (
 	"context"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/google/uuid"
-	"github.com/zoninnik89/messenger/chat-client/logging"
-	producer "github.com/zoninnik89/messenger/chat-client/producer"
+	"github.com/zoninnik89/messenger/chat-client/internal/logging"
+	"github.com/zoninnik89/messenger/chat-client/internal/producer"
 	pb "github.com/zoninnik89/messenger/common/api"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

@@ -1,5 +1,6 @@
 env: "local"
 grpc:
+  addr: "localhost"
   port: 2000
   name: "pub-sub"
   timeout: 1h

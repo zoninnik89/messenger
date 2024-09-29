@@ -22,7 +22,7 @@ func (h *serverAPI) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_
 		return err
 	}
 
-	err := h.service.Subscribe(req.GetChatId(), stream)
+	err := h.service.Subscribe(req.GetUserId(), stream)
 	if err != nil {
 		return status.Error(codes.Internal, "internal server error")
 	}
@@ -31,8 +31,8 @@ func (h *serverAPI) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_
 }
 
 func validateChat(req *pb.SubscribeRequest) error {
-	if req.GetChatId() == "" {
-		return status.Errorf(codes.InvalidArgument, "chat ID required")
+	if req.GetUserId() == "" {
+		return status.Errorf(codes.InvalidArgument, "user id is required")
 	}
 	return nil
 }

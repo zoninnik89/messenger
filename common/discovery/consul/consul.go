@@ -28,8 +28,8 @@ func (registry *Registry) Register(
 	ctx context.Context,
 	instanceID string,
 	host string,
-	serviceName string,
 	hostPort int,
+	serviceName string,
 ) error {
 
 	return registry.client.Agent().ServiceRegister(&consul.AgentServiceRegistration{
