@@ -8,7 +8,7 @@ import (
 )
 
 type Registry interface {
-	Register(ctx context.Context, instanceID, host string, serviceName string, hostPort int) error
+	Register(ctx context.Context, instanceID, host string, hostPort int, serviceName string) error
 	Deregister(ctx context.Context, instanceID string) error
 	Discover(ctx context.Context, serviceName string) ([]string, error)
 	HealthCheck(instanceID string) error
