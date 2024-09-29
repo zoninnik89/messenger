@@ -51,7 +51,7 @@ message SubscribeRequest {
 
 // Chat client
 
-service ChatClient{
+service ChatClientService{
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc GetMessagesStream(GetMessagesStreamRequest) returns (stream Message);
 }
