@@ -160,7 +160,6 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	PubSubService_Subscribe_FullMethodName = "/api.PubSubService/Subscribe"
-	PubSubService_Publish_FullMethodName   = "/api.PubSubService/Publish"
 )
 
 // PubSubServiceClient is the client API for PubSubService service.
@@ -169,8 +168,6 @@ const (
 type PubSubServiceClient interface {
 	// Client subscribes to a chat and receives messages via streaming.
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Message], error)
-	// Publish a message to a chat.
-	Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
 }
 
 type pubSubServiceClient struct {
@@ -200,24 +197,12 @@ func (c *pubSubServiceClient) Subscribe(ctx context.Context, in *SubscribeReques
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PubSubService_SubscribeClient = grpc.ServerStreamingClient[Message]
 
-func (c *pubSubServiceClient) Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PublishResponse)
-	err := c.cc.Invoke(ctx, PubSubService_Publish_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // PubSubServiceServer is the server API for PubSubService service.
 // All implementations must embed UnimplementedPubSubServiceServer
 // for forward compatibility.
 type PubSubServiceServer interface {
 	// Client subscribes to a chat and receives messages via streaming.
 	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[Message]) error
-	// Publish a message to a chat.
-	Publish(context.Context, *PublishRequest) (*PublishResponse, error)
 	mustEmbedUnimplementedPubSubServiceServer()
 }
 
@@ -230,9 +215,6 @@ type UnimplementedPubSubServiceServer struct{}
 
 func (UnimplementedPubSubServiceServer) Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[Message]) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
-}
-func (UnimplementedPubSubServiceServer) Publish(context.Context, *PublishRequest) (*PublishResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
 func (UnimplementedPubSubServiceServer) mustEmbedUnimplementedPubSubServiceServer() {}
 func (UnimplementedPubSubServiceServer) testEmbeddedByValue()                       {}
@@ -266,36 +248,13 @@ func _PubSubService_Subscribe_Handler(srv interface{}, stream grpc.ServerStream)
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PubSubService_SubscribeServer = grpc.ServerStreamingServer[Message]
 
-func _PubSubService_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PublishRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(PubSubServiceServer).Publish(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: PubSubService_Publish_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PubSubServiceServer).Publish(ctx, req.(*PublishRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // PubSubService_ServiceDesc is the grpc.ServiceDesc for PubSubService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PubSubService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "api.PubSubService",
 	HandlerType: (*PubSubServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Publish",
-			Handler:    _PubSubService_Publish_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Subscribe",

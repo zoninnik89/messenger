@@ -10,23 +10,23 @@ import (
 
 // Async Map
 
-type AsyncMap struct {
+type ClientConnStorage struct {
 	store sync.Map
 }
 
-func NewAsyncMap() *AsyncMap {
-	return &AsyncMap{}
+func NewClientConnStorage() *ClientConnStorage {
+	return &ClientConnStorage{}
 }
 
 // Add a value to the slice at the given key
-func (m *AsyncMap) Add(key string, value chan *pb.Message) {
+func (m *ClientConnStorage) Add(key string, value chan *pb.Message) {
 
 	m.store.Store(key, value)
 
 }
 
 // Get the slice of values for the given key
-func (m *AsyncMap) Get(key string) (chan *pb.Message, error) {
+func (m *ClientConnStorage) Get(key string) (chan *pb.Message, error) {
 	var op = "storage.Get"
 
 	channel, ok := m.store.Load(key)
@@ -38,7 +38,7 @@ func (m *AsyncMap) Get(key string) (chan *pb.Message, error) {
 	return channel.(chan *pb.Message), nil
 }
 
-func (m *AsyncMap) Remove(key string) error {
+func (m *ClientConnStorage) Remove(key string) error {
 	var op = "storage.Remove"
 
 	_, ok := m.store.Load(key)

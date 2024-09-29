@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"testing"
@@ -58,28 +59,56 @@ func grpcAddress(cfg *config.Config) string {
 	return net.JoinHostPort(grpcHost, strconv.Itoa(cfg.GRPC.Port))
 }
 
-func (s *Suite) SubscribeToChat(ctx context.Context, chat string, messages chan<- *pb.Message) {
-	stream, err := s.PubSubClient.Subscribe(context.Background(), &pb.SubscribeRequest{ChatId: chat})
+func (s *Suite) SubscribeToChat(ctx context.Context, userID string, messages chan<- *pb.Message) {
+	stream, err := s.PubSubClient.Subscribe(context.Background(), &pb.SubscribeRequest{UserId: userID})
 	if err != nil {
 		return
 	}
 
-	// Continuously receive messages from the stream
-	for {
-		msg, err := stream.Recv()
-		if err == io.EOF {
-			// Server closed connection
-			break
+	defer func() {
+		log.Println("closing connection")
+		stream.CloseSend()
+		close(messages)
+	}()
+
+	// Create a channel to receive stream messages or errors
+	recvChan := make(chan *pb.Message)
+	errChan := make(chan error)
+
+	// Start a goroutine to receive messages from the stream
+	go func() {
+		for {
+			msg, err := stream.Recv()
+			if err != nil {
+				if err == io.EOF {
+					close(recvChan)
+					return
+				}
+				errChan <- err
+				return
+			}
+			recvChan <- msg
 		}
-		if err != nil {
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			// Context canceled, stop receiving messages
+			return
+		case msg, ok := <-recvChan:
+			if !ok {
+				// Stream has been closed
+				return
+			}
+			// Send the received message to the messages channel
+			messages <- msg
+		case err := <-errChan:
+			// Handle any error from stream.Recv()
+			_ = err // You can log or handle the error here
 			return
 		}
-
-		// Log the received message
-		messages <- msg.Message
 	}
-
-	close(messages)
 }
 
 func (s *Suite) SendMessage(
@@ -115,4 +144,5 @@ func (s *Suite) SendMessage(
 
 	close(deliveryChan)
 	return nil
+
 }

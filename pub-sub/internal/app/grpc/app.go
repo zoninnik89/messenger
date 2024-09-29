@@ -47,7 +47,7 @@ func (a *App) MustConsume(ctx context.Context, consumer *kafka.Consumer) {
 	const op = "grpcapp.MustConsume"
 
 	for {
-		status, err := a.service.ConsumeMessage(ctx, consumer)
+		status, err := a.service.ConsumeAndSendoutMessage(ctx, consumer)
 		if err != nil {
 			a.logger.Warn("error consuming a message", "op", op, err, zap.Error(err))
 		} else {
