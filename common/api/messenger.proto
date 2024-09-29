@@ -49,6 +49,25 @@ message SubscribeRequest {
   string user_id = 1;
 }
 
+// Chat client
+
+service ChatClient{
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc GetMessagesStream(GetMessagesStreamRequest) returns (stream Message);
+}
+
+message SendMessageRequest {
+  Message message = 1;
+}
+
+message SendMessageResponse {
+  string status = 1;
+}
+
+message GetMessagesStreamRequest {
+  string user_id = 1;
+}
+
 // Chat History
 
 service ChatHistoryService {
