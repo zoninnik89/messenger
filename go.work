@@ -6,4 +6,5 @@ use (
 	./pub-sub
 	./chat-history
 	sso
+	facade-service
 )
