@@ -1,4 +1,4 @@
-package tests
+package suite
 
 import (
 	"context"
@@ -20,8 +20,8 @@ const (
 
 type Suite struct {
 	*testing.T
-	Cfg              *config.Config
-	ChatClientClient pb.ChatClientClient
+	Cfg                     *config.Config
+	ChatClientServiceClient pb.ChatClientServiceClient
 }
 
 func New(t *testing.T) (context.Context, *Suite) {
@@ -43,9 +43,9 @@ func New(t *testing.T) (context.Context, *Suite) {
 	}
 
 	return ctx, &Suite{
-		T:                t,
-		Cfg:              cfg,
-		ChatClientClient: pb.NewChatClientClient(cc),
+		T:                       t,
+		Cfg:                     cfg,
+		ChatClientServiceClient: pb.NewChatClientServiceClient(cc),
 	}
 }
 
@@ -54,7 +54,7 @@ func grpcAddress(cfg *config.Config) string {
 }
 
 func (s *Suite) SubscribeToChat(ctx context.Context, userID string, messages chan<- *pb.Message) {
-	stream, err := s.ChatClientClient.GetMessagesStream(context.Background(), &pb.GetMessagesStreamRequest{UserId: userID})
+	stream, err := s.ChatClientServiceClient.GetMessagesStream(ctx, &pb.GetMessagesStreamRequest{UserId: userID})
 	if err != nil {
 		return
 	}
@@ -122,11 +122,11 @@ func (s *Suite) SendMessage(
 		SentTs:      strconv.FormatInt(time.Now().Unix(), 10),
 	}
 
-	_, err := s.ChatClientClient.SendMessage(ctx, &pb.SendMessageRequest{Message: msg})
+	_, err := s.ChatClientServiceClient.SendMessage(ctx, &pb.SendMessageRequest{Message: msg})
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 
 }

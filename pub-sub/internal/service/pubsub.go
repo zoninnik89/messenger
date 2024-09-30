@@ -57,19 +57,22 @@ func (p *PubSubService) Subscribe(userID string, stream pb.PubSubService_Subscri
 	}
 
 	defer func() {
-		p.Logger.Infow("removing client from connections", "userID", userID)
-		p.removeClient(userID)
+		p.Logger.Infow("removing user connection from connections storage", "userID", userID)
+		p.removeUserConnection(userID)
 		close(channel)
 	}()
+
+	p.Logger.Infow("User subscribed for messages", "op", op, "user ID", userID)
 
 	for {
 		select {
 		case msg := <-channel:
-			p.Logger.Infow("start sending message to user channel", "op", op, "message", msg)
+			p.Logger.Infow("sending message", "op", op, "recipient ID", userID, "message", msg)
 			if err := stream.Send(msg); err != nil {
 				p.Logger.Errorw("error sending message to user", "op", op, "err", err)
 				return fmt.Errorf("%s: %w", op, err)
 			}
+			p.Logger.Infow("message sent", "op", op, "recipient ID", userID, "message", msg)
 		case <-stream.Context().Done():
 			p.Logger.Infow("user disconnected from server", "op", op, "user ID", userID)
 			return nil
@@ -120,29 +123,27 @@ func (p *PubSubService) ConsumeAndSendoutMessage(ctx context.Context, consumer *
 		channel, err := p.Connections.Get(recipientID)
 		if err != nil {
 			p.Logger.Errorw("unsuccessful user chan retrieval", "op", op, "recipientID", recipientID, "error", err)
-			continue
-		}
-		if senderID == recipientID {
+		} else if senderID == recipientID {
 			p.Logger.Errorw("sender ID == user ID, message not sent", "op", op, "recipientID", recipientID, "error", err)
-			continue
-		}
-		p.Logger.Infow(
-			"sending message to recipient",
-			"op", op,
-			"recipientID", recipientID,
-			"chatID", chatID,
-			"senderID", senderID,
-			"messageID", messageID,
-			"messageText", messageText,
-			"sentTime", sentTime,
-		)
+		} else {
+			p.Logger.Infow(
+				"sending message to recipient",
+				"op", op,
+				"recipientID", recipientID,
+				"chatID", chatID,
+				"senderID", senderID,
+				"messageID", messageID,
+				"messageText", messageText,
+				"sentTime", sentTime,
+			)
 
-		channel <- &pb.Message{
-			ChatId:      chatID,
-			SenderId:    senderID,
-			MessageId:   messageID,
-			MessageText: messageText,
-			SentTs:      sentTime,
+			channel <- &pb.Message{
+				ChatId:      chatID,
+				SenderId:    senderID,
+				MessageId:   messageID,
+				MessageText: messageText,
+				SentTs:      sentTime,
+			}
 		}
 	}
 	p.Logger.Infow("message successfully sent out", "op", op, "chatID", chatID, "messageID", messageID)
@@ -150,13 +151,15 @@ func (p *PubSubService) ConsumeAndSendoutMessage(ctx context.Context, consumer *
 	return messageID, nil
 }
 
-func (p *PubSubService) removeClient(userID string) {
+func (p *PubSubService) removeUserConnection(userID string) {
 	var op = "service.RemoveClient"
 
 	err := p.Connections.Remove(userID)
 	if err != nil {
 		p.Logger.Errorw("unsuccessful user connection removal", "op", op, "err", ErrClientNotFound)
+		return
 	}
+	p.Logger.Infow("user connection removed", "op", op, "user", userID)
 }
 
 func (p *PubSubService) validateMessage(msg *pb.Message) error {

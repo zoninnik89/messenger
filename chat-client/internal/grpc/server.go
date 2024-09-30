@@ -2,87 +2,95 @@ package grpc
 
 import (
 	"context"
-	"github.com/zoninnik89/messenger/chat-client/internal/logging"
+	"github.com/zoninnik89/messenger/chat-client/internal/types"
 	pb "github.com/zoninnik89/messenger/common/api"
-	"github.com/zoninnik89/messenger/common/discovery"
-	"go.uber.org/zap"
-	"io"
-	"log"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-type Gateway struct {
-	registry discovery.Registry
-	logger   *zap.SugaredLogger
+type serverAPI struct {
+	pb.UnimplementedChatClientServiceServer
+	service types.ChatClientInterface
 }
 
-func NewGRPCGateway(r discovery.Registry) *Gateway {
-	return &Gateway{
-		registry: r,
-		logger:   logging.GetLogger().Sugar(),
-	}
+func Register(srv *grpc.Server, service types.ChatClientInterface) {
+	pb.RegisterChatClientServiceServer(srv, &serverAPI{service: service})
 }
 
-func (g *Gateway) SubscribeForMessages(ctx context.Context, userID string, messages chan<- *pb.Message) error {
+func (s *serverAPI) GetMessagesStream(req *pb.GetMessagesStreamRequest, stream pb.ChatClientService_GetMessagesStreamServer) error {
 	const op = "gateway.SubscribeForMessages"
-	g.logger.Infow("starting connection with pub-sub service", "op", op, "user ID", userID)
-	conn, err := discovery.ServiceConnection(ctx, "pub-sub", g.registry)
+	userID := req.GetUserId()
+
+	if err := validateUser(userID); err != nil {
+		return err
+	}
+
+	err := s.service.SubscribeForMessages(context.Background(), userID, stream)
 	if err != nil {
-		g.logger.Fatalw("failed to dial server", "op", op, "err", err)
+		return status.Error(codes.Internal, "internal server error")
 	}
 
-	g.logger.Infow("connected to pub-sub service")
-	client := pb.NewPubSubServiceClient(conn)
-	subscribeRequest := &pb.SubscribeRequest{
-		UserId: userID,
+	return nil
+}
+
+func (s *serverAPI) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
+	const op = "gateway.SendMessage"
+
+	if err := validateMessage(req); err != nil {
+		return nil, err
 	}
-	stream, err := client.Subscribe(ctx, subscribeRequest)
+
+	err := s.service.SendMessage(
+		req.Message.GetMessageId(),
+		req.Message.GetChatId(),
+		req.Message.GetSenderId(),
+		req.Message.GetMessageText(),
+		req.Message.GetSentTs(),
+	)
+
 	if err != nil {
-		g.logger.Fatalw("failed to subscribe to pub-sub", "op", op, "err", err)
+		// add error handling
 	}
 
-	defer func() {
-		log.Println("closing connection")
-		stream.CloseSend()
-		close(messages)
-	}()
+	return &pb.SendMessageResponse{Status: "sent"}, nil
+}
 
-	// Create a channel to receive stream messages or errors
-	recvChan := make(chan *pb.Message)
-	errChan := make(chan error)
+func validateUser(userID string) error {
+	if userID == "" {
+		return status.Errorf(codes.InvalidArgument, "user id is required")
+	}
+	return nil
+}
 
-	// Start a goroutine to receive messages from the stream
-	go func() {
-		for {
-			msg, err := stream.Recv()
-			if err != nil {
-				if err == io.EOF {
-					close(recvChan)
-					return
-				}
-				errChan <- err
-				return
-			}
-			recvChan <- msg
-		}
-	}()
+func validateMessage(req *pb.SendMessageRequest) error {
+	const op = "gateway.validateMessage"
 
-	for {
-		select {
-		case <-ctx.Done():
-			// Context canceled, stop receiving messages
-			return nil
-		case msg, ok := <-recvChan:
-			if !ok {
-				// Stream has been closed
-				return nil
-			}
-			// Send the received message to the messages channel
-			messages <- msg
-		case err := <-errChan:
-			// Handle any error from stream.Recv()
-			_ = err // You can log or handle the error here
-			return nil
-		}
+	chatID := req.Message.GetChatId()
+	senderID := req.Message.GetSenderId()
+	messageID := req.Message.GetMessageId()
+	messageText := req.Message.GetMessageText()
+	sentTime := req.Message.GetSentTs()
+
+	if messageID == "" {
+		return status.Error(codes.InvalidArgument, "message ID is required")
 	}
 
+	if chatID == "" {
+		return status.Error(codes.InvalidArgument, "chat ID is required")
+	}
+
+	if senderID == "" {
+		return status.Error(codes.InvalidArgument, "sender ID is required")
+	}
+
+	if messageText == "" {
+		return status.Error(codes.InvalidArgument, "message text is required")
+	}
+
+	if sentTime == "" {
+		return status.Error(codes.InvalidArgument, "sent timestamp is required")
+	}
+
+	return nil
 }

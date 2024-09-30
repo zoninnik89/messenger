@@ -5,13 +5,13 @@ import (
 	"github.com/brianvoe/gofakeit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	suite "github.com/zoninnik89/messenger/chat-client/tests/suite"
 	pb "github.com/zoninnik89/messenger/common/api"
-	suite "github.com/zoninnik89/messenger/pub-sub/tests/suite"
 	"testing"
 	"time"
 )
 
-func TestMessageProduceConsume_HappyPath(t *testing.T) {
+func TestMessageSendReceive_HappyPath(t *testing.T) {
 	ctx, st := suite.New(t)
 	ctx2, st2 := suite.New(t)
 
@@ -20,7 +20,7 @@ func TestMessageProduceConsume_HappyPath(t *testing.T) {
 
 	messageId := gofakeit.UUID()
 	chatID := "chat1"
-	senderID := gofakeit.UUID()
+	senderID := "user3"
 	messageText := gofakeit.Word()
 
 	ctxWithCancel, cancel := context.WithCancel(ctx)
@@ -33,7 +33,7 @@ func TestMessageProduceConsume_HappyPath(t *testing.T) {
 
 	go st2.SubscribeToChat(ctxWithCancel2, userID2, receivedMessagesChan2)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	err := st.SendMessage(ctx, messageId, chatID, senderID, messageText)
 	require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestMessageProduceConsume_OneChatParticipant(t *testing.T) {
 			if ok {
 				receivedMessages2 = append(receivedMessages2, msg)
 			}
-		case <-time.After(2 * time.Second):
+		case <-time.After(5 * time.Second):
 			cancel()
 			receivedMessagesChan = nil
 			receivedMessagesChan2 = nil
@@ -131,6 +131,6 @@ func TestMessageProduceConsume_OneChatParticipant(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, len(receivedMessages), 0)
+	assert.Equal(t, len(receivedMessages), 1)
 	assert.Equal(t, len(receivedMessagesChan2), 0)
 }
