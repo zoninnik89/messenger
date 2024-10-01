@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/zoninnik89/messenger/facade-service/internal/config"
+	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/chat/send-message"
 )
 
 func main() {
@@ -16,4 +17,5 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
+	router.Post("/send", send_message.New())
 }
