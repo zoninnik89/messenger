@@ -1,9 +1,11 @@
-package grpcgateway
+package grpc
 
 import (
 	"context"
+	"github.com/zoninnik89/messenger/chat-client/internal/logging"
 	"github.com/zoninnik89/messenger/chat-client/internal/types"
 	pb "github.com/zoninnik89/messenger/common/api"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -12,22 +14,30 @@ import (
 type serverAPI struct {
 	pb.UnimplementedChatClientServiceServer
 	service types.ChatClientInterface
+	logger  *zap.SugaredLogger
 }
 
 func Register(srv *grpc.Server, service types.ChatClientInterface) {
-	pb.RegisterChatClientServiceServer(srv, &serverAPI{service: service})
+	logger := logging.GetLogger().Sugar()
+	pb.RegisterChatClientServiceServer(srv, &serverAPI{service: service, logger: logger})
 }
 
 func (s *serverAPI) GetMessagesStream(req *pb.GetMessagesStreamRequest, stream pb.ChatClientService_GetMessagesStreamServer) error {
-	const op = "gateway.SubscribeForMessages"
+	const op = "grpcgateway.GetMessagesStream"
+
+	s.logger.Infow("received GRPC request", "op", op, "req", req)
 	userID := req.GetUserId()
 
+	s.logger.Infow("received ")
+
 	if err := validateUser(userID); err != nil {
+		s.logger.Errorw("request is missing user id", "op", op, "req", req)
 		return err
 	}
 
 	err := s.service.SubscribeForMessages(context.Background(), userID, stream)
 	if err != nil {
+		s.logger.Errorw("internal server error", "op", op, "req", req)
 		return status.Error(codes.Internal, "internal server error")
 	}
 
@@ -35,9 +45,12 @@ func (s *serverAPI) GetMessagesStream(req *pb.GetMessagesStreamRequest, stream p
 }
 
 func (s *serverAPI) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
-	const op = "gateway.SendMessage"
+	const op = "grpcgateway.SendMessage"
+
+	s.logger.Infow("received GRPC request", "op", op, "req", req)
 
 	if err := validateMessage(req); err != nil {
+		s.logger.Errorw("request is missing one of the fields", "op", op, "req", req)
 		return nil, err
 	}
 
@@ -50,7 +63,7 @@ func (s *serverAPI) SendMessage(ctx context.Context, req *pb.SendMessageRequest)
 	)
 
 	if err != nil {
-		// add error handling
+		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
 	return &pb.SendMessageResponse{Status: "sent"}, nil

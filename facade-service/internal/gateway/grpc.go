@@ -66,7 +66,7 @@ func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStre
 	conn, err := discovery.ServiceConnection(ctx, "chat-client", g.registry)
 	if err != nil {
 		g.logger.Errorw("error while connecting to chat-client", "op", op, "error", err)
-		err
+		return
 	}
 
 	g.logger.Infow("connected to chat-client")
