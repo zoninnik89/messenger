@@ -1,10 +1,13 @@
 package send_message
 
 import (
+	"context"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	pb "github.com/zoninnik89/messenger/common/api"
+	grpcgateway "github.com/zoninnik89/messenger/facade-service/internal/gateway"
 	"github.com/zoninnik89/messenger/facade-service/internal/lib/response"
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
 	"log"
@@ -24,7 +27,7 @@ type Response struct {
 	SentTS    string `json:"sent_ts"`
 }
 
-func New() http.HandlerFunc {
+func New(g *grpcgateway.Gateway) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.chat.send-message.New"
 		logger := logging.GetLogger().Sugar()
@@ -44,10 +47,12 @@ func New() http.HandlerFunc {
 			return
 		}
 
-		log.Println("request body decoded", "op", op, "request_id", middleware.GetReqID(r.Context()), "req", req)
+		requestID := middleware.GetReqID(r.Context())
+
+		log.Println("request body decoded", "op", op, "request_id", requestID, "req", req)
 
 		if err := validator.New().Struct(req); err != nil {
-			log.Println("invalid request", "op", op, "request_id", middleware.GetReqID(r.Context()), "request", req, "error", err)
+			log.Println("invalid request", "op", op, "request_id", requestID, "request", req, "error", err)
 			validateErr := err.(validator.ValidationErrors)
 
 			render.JSON(w, r, response.ValidationError(validateErr))
@@ -55,15 +60,30 @@ func New() http.HandlerFunc {
 			return
 		}
 
-		messageID := uuid.New()
+		messageID := uuid.New().String()
 		sentTS := time.Now().Unix()
-		// Get user ID from jwt token
+		senderID := "111" // Get user ID from jwt token
+
+		message := &pb.Message{
+			MessageId:   messageID,
+			ChatId:      req.ChatID,
+			SenderId:    senderID,
+			MessageText: req.MessageText,
+			SentTs:      strconv.FormatInt(sentTS, 10),
+		}
 
 		// Add call to GRPC handler
+		res, err := g.SendMessage(context.Background(), &pb.SendMessageRequest{
+			Message: message,
+		})
+
+		if err != nil {
+
+		}
 
 		render.JSON(w, r, Response{
 			Response:  response.OK(),
-			MessageID: messageID.String(),
+			MessageID: messageID,
 			SentTS:    strconv.FormatInt(sentTS, 10),
 		})
 	}
