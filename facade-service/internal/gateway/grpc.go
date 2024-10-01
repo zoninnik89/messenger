@@ -3,6 +3,7 @@ package grpcgateway
 import (
 	"context"
 	"errors"
+	"fmt"
 	pb "github.com/zoninnik89/messenger/common/api"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
@@ -29,6 +30,7 @@ func NewGRPCGateway(r discovery.Registry) *Gateway {
 var (
 	ErrInternalServerError = errors.New("internal server error")
 	ErrOneOfFieldsMissing  = errors.New("one of the fields are missing")
+	ErrUserIDIsMissing     = errors.New("user ID is missing")
 )
 
 func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
@@ -36,7 +38,7 @@ func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (
 	g.logger.Infow("starting connection with chat-client service")
 	conn, err := discovery.ServiceConnection(ctx, "chat-client", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to chat-client", "op", op, "error", err)
+		g.logger.Errorw("error while connecting to chat-client", "op", op, "req", req, "error", err)
 		return nil, err
 	}
 
@@ -49,8 +51,8 @@ func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (
 		st, ok := status.FromError(err)
 		if ok {
 			if st.Code() == codes.InvalidArgument {
-				g.logger.Errorw("error while sending message", "op", op, "error", err)
-				return nil, ErrOneOfFieldsMissing
+				g.logger.Errorw("error while sending message", "op", op, "req", req, "error", err)
+				return nil, fmt.Errorf("%s: %s", op, st.Message())
 			}
 		}
 		return nil, ErrInternalServerError
@@ -65,17 +67,23 @@ func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStre
 
 	conn, err := discovery.ServiceConnection(ctx, "chat-client", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to chat-client", "op", op, "error", err)
-		return
+		g.logger.Errorw("error while connecting to chat-client", "op", op, "req", req, "error", err)
+		return err
 	}
 
 	g.logger.Infow("connected to chat-client")
 
 	client := pb.NewChatClientServiceClient(conn)
 
-	stream, err := client.GetMessagesStream(ctx, &pb.GetMessagesStreamRequest{UserId: userID})
+	stream, err := client.GetMessagesStream(ctx, &pb.GetMessagesStreamRequest{UserId: req.GetUserId()})
 	if err != nil {
-		return
+		st, ok := status.FromError(err)
+		if ok {
+			if st.Code() == codes.InvalidArgument {
+				return ErrUserIDIsMissing
+			}
+		}
+		return ErrInternalServerError
 	}
 
 	defer func() {
@@ -108,29 +116,44 @@ func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStre
 		select {
 		case <-ctx.Done():
 			// Context canceled, stop receiving messages
-			return
+			return nil
 		case msg, ok := <-recvChan:
 			if !ok {
 				// Stream has been closed
-				return
+				return nil
 			}
 			// Send the received message to the messages channel
 			messages <- msg
 		case err := <-errChan:
 			// Handle any error from stream.Recv()
-			_ = err // You can log or handle the error here
-			return
+			g.logger.Errorw("error while receiving message", "op", op, "userID", req.GetUserId(), "error", err)
+			return err
 		}
 	}
 
-	res, err := client.SendMessage(context.Background(), req)
+}
+
+func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	const op = "grpcgateway.Login"
+	g.logger.Infow("starting connection with sso service")
+
+	conn, err := discovery.ServiceConnection(ctx, "sso", g.registry)
+	if err != nil {
+		g.logger.Errorw("error while connecting to sso service", "op", op, "req", req, "error", err)
+		return nil, err
+	}
+
+	g.logger.Infow("connected to sso service")
+
+	client := pb.NewAuthServiceClient(conn)
+	res, err := client.Login(context.Background(), req)
 
 	if err != nil {
 		st, ok := status.FromError(err)
 		if ok {
 			if st.Code() == codes.InvalidArgument {
-				g.logger.Errorw("error while sending message", "op", op, "error", err)
-				return nil, ErrOneOfFieldsMissing
+				g.logger.Errorw("error while logging in", "op", op, "req", req, "error", err)
+				return nil, fmt.Errorf("%s: %s", op, st.Message())
 			}
 		}
 		return nil, ErrInternalServerError
@@ -139,14 +162,31 @@ func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStre
 	return res, err
 }
 
-func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	const op = "grpcgateway.Login"
-	g.logger.Infow("starting connection with sso service")
-
-}
-
 func (g *Gateway) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	const op = "grpcgateway.Register"
 	g.logger.Infow("starting connection with sso service")
 
+	conn, err := discovery.ServiceConnection(ctx, "sso", g.registry)
+	if err != nil {
+		g.logger.Errorw("error while connecting to sso service", "op", op, "error", err)
+		return nil, err
+	}
+
+	g.logger.Infow("connected to sso service")
+
+	client := pb.NewAuthServiceClient(conn)
+	res, err := client.Register(context.Background(), req)
+
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			if st.Code() == codes.InvalidArgument {
+				g.logger.Errorw("error while registering", "op", op, "req", req, "error", err)
+				return nil, fmt.Errorf("%s: %s", op, st.Message())
+			}
+		}
+		return nil, ErrInternalServerError
+	}
+
+	return res, err
 }
