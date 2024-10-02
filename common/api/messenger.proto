@@ -12,7 +12,7 @@ service AuthService {
 }
 
 message RegisterRequest {
-  string email = 1; // Email of a user to be registered.
+  string login = 1; // Email of a user to be registered.
   string password = 2; // Password of a user to be registered.
 }
 
@@ -21,7 +21,7 @@ message RegisterResponse {
 }
 
 message LoginRequest {
-  string email = 1; // Email of a user to be logged in.
+  string login = 1; // Email of a user to be logged in.
   string password = 2; // Password of a user to be logged in.
   int32 app_id = 3; // ID of the app to be logged in.
 }
