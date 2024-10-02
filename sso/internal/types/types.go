@@ -7,11 +7,11 @@ import (
 
 type Auth interface {
 	Login(ctx context.Context, email string, password string, appID int) (token string, err error)
-	RegisterNewUser(ctx context.Context, email string, password string) (userID int64, err error)
+	RegisterNewUser(ctx context.Context, email string, password string) (userID string, err error)
 }
 
 type UserSaver interface {
-	SaveUser(ctx context.Context, email string, passHash []byte) (uid int64, err error)
+	SaveUser(ctx context.Context, email string, passHash []byte) (uid string, err error)
 	//UpdateUser(ctx context.Context, user models.User) error
 }
 

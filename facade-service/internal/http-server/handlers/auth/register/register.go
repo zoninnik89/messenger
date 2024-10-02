@@ -20,12 +20,12 @@ type Request struct {
 
 type Response struct {
 	response.Response
-	Token string `json:"message_id"`
+	UserID string `json:"user_id"`
 }
 
 func New(g *grpcgateway.Gateway) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.chat.login.New"
+		const op = "handlers.chat.register.New"
 		logger := logging.GetLogger().Sugar()
 
 		var req Request
@@ -55,29 +55,27 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 			return
 		}
 
-		loginReq := &pb.LoginRequest{
+		registerReq := &pb.RegisterRequest{
 			Login:    req.Login,
 			Password: req.Password,
-			AppId:    1,
 		}
 
-		// Add call to GRPC handler
-		res, err := g.Login(context.Background(), loginReq, requestID)
+		res, err := g.Register(context.Background(), registerReq, requestID)
 
 		if err != nil {
 			if errors.Is(err, grpcgateway.ErrInternalServerError) {
 				render.JSON(w, r, response.Error("internal server error"))
 				return
 			}
-			render.JSON(w, r, response.Error("not valid login request"))
+			render.JSON(w, r, response.Error("not valid register request"))
 			return
 		}
 
-		logger.Infow("successful login", "op", op, "request_id", requestID)
+		logger.Infow("successful register", "op", op, "request_id", requestID)
 
 		render.JSON(w, r, Response{
 			Response: response.OK(),
-			Token:    res.GetToken(),
+			UserID:   res.GetUserId(),
 		})
 	}
 }

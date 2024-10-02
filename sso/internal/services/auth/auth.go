@@ -105,7 +105,7 @@ func (a *Auth) RegisterNewUser(
 	ctx context.Context,
 	email string,
 	password string,
-) (userID int64, err error) {
+) (userID string, err error) {
 	const op = "auth.RegisterNewUser"
 
 	a.logger.Info("registering new user")
@@ -113,7 +113,7 @@ func (a *Auth) RegisterNewUser(
 	if err != nil {
 		a.logger.Error("failed to hash password", zap.Error(err))
 
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	id, err := a.usrSaver.SaveUser(ctx, email, passHash)
@@ -121,12 +121,12 @@ func (a *Auth) RegisterNewUser(
 		if errors.Is(err, storagepkg.ErrUserExists) {
 			a.logger.Warnw("user already exists", "error", err)
 
-			return 0, fmt.Errorf("%s: %w", op, ErrUserAlreadyExists)
+			return "", fmt.Errorf("%s: %w", op, ErrUserAlreadyExists)
 		}
 
 		a.logger.Error("failed to save user", zap.Error(err))
 
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	a.logger.Info("user registered")

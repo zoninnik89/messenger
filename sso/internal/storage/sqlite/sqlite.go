@@ -9,6 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/zoninnik89/messenger/sso/internal/domain/models"
 	"github.com/zoninnik89/messenger/sso/internal/storage"
+	"strconv"
 )
 
 type Storage struct {
@@ -26,12 +27,12 @@ func NewStorage(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
+func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (string, error) {
 	const op = "storage.sqlite.CreateUser"
 
 	stmt, err := s.db.Prepare("INSERT INTO users (email, pass_hash) values (?, ?)")
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	res, err := stmt.ExecContext(ctx, email, passHash)
@@ -39,18 +40,18 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 		var sqliteErr sqlite3.Error
 
 		if errors.As(err, &sqliteErr) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
-			return 0, fmt.Errorf("%s: %w", op, storage.ErrUserExists)
+			return "", fmt.Errorf("%s: %w", op, storage.ErrUserExists)
 		}
 
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	return id, nil
+	return strconv.Itoa(int(id)), nil
 }
 
 func (s *Storage) GetUser(ctx context.Context, email string) (models.User, error) {

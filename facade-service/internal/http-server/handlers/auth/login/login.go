@@ -20,7 +20,7 @@ type Request struct {
 
 type Response struct {
 	response.Response
-	Token string `json:"message_id"`
+	Token string `json:"auth_token"`
 }
 
 func New(g *grpcgateway.Gateway) http.HandlerFunc {
