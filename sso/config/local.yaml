@@ -4,7 +4,7 @@ token_ttl: 1h
 grpc:
   addr: "localhost"
   port: 44044
-  name: "sso"
+  name: "sso-service"
   timeout: 1h
 consul:
   port: 8500

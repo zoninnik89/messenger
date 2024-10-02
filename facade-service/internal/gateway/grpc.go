@@ -171,7 +171,7 @@ func (g *Gateway) Register(ctx context.Context, req *pb.RegisterRequest, request
 	const op = "grpcgateway.Register"
 	g.logger.Infow("starting connection with sso service", "op", op, "requestID", requestID)
 
-	conn, err := discovery.ServiceConnection(ctx, "sso", g.registry)
+	conn, err := discovery.ServiceConnection(ctx, "sso-service", g.registry)
 	if err != nil {
 		g.logger.Errorw("error while connecting to sso service", "op", op, "requestID", requestID, "error", err)
 		return nil, err

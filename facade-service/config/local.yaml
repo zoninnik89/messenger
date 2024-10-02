@@ -3,4 +3,7 @@ http_server:
   address: "localhost"
   port: "8082"
   timeout: 4s
+  name: "facade-service"
   idle_timeout: 60s
+consul:
+  port: 8500
