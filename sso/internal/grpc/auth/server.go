@@ -29,7 +29,7 @@ func (s *serverAPI) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginR
 		return nil, err
 	}
 
-	token, err := s.service.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
+	token, err := s.service.Login(ctx, req.GetLogin(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
@@ -52,7 +52,7 @@ func (s *serverAPI) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.
 		return nil, err
 	}
 
-	userID, err := s.service.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
+	userID, err := s.service.RegisterNewUser(ctx, req.GetLogin(), req.GetPassword())
 	if err != nil {
 		if errors.Is(err, auth.ErrUserAlreadyExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
@@ -66,7 +66,7 @@ func (s *serverAPI) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.
 }
 
 func validateLoginData(req *pb.LoginRequest) error {
-	if req.GetEmail() == "" {
+	if req.GetLogin() == "" {
 		return status.Error(codes.InvalidArgument, "email required")
 	}
 	if req.GetPassword() == "" {
@@ -80,7 +80,7 @@ func validateLoginData(req *pb.LoginRequest) error {
 }
 
 func validateRegisterData(req *pb.RegisterRequest) error {
-	if req.GetEmail() == "" {
+	if req.GetLogin() == "" {
 		return status.Error(codes.InvalidArgument, "email required")
 	}
 	if req.GetPassword() == "" {
