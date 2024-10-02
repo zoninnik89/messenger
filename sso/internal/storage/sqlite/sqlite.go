@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/zoninnik89/messenger/sso/internal/domain/models"
 	"github.com/zoninnik89/messenger/sso/internal/storage"
-	"strconv"
 )
 
 type Storage struct {
@@ -27,15 +27,17 @@ func NewStorage(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (string, error) {
+func (s *Storage) SaveUser(ctx context.Context, login string, passHash []byte) (string, error) {
 	const op = "storage.sqlite.CreateUser"
 
-	stmt, err := s.db.Prepare("INSERT INTO users (email, pass_hash) values (?, ?)")
+	stmt, err := s.db.Prepare("INSERT INTO users (login, pass_hash, user_id) values (?, ?)")
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	res, err := stmt.ExecContext(ctx, email, passHash)
+	userID := uuid.New().String()
+
+	_, err = stmt.ExecContext(ctx, login, passHash, userID)
 	if err != nil {
 		var sqliteErr sqlite3.Error
 
@@ -46,26 +48,21 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
-
-	return strconv.Itoa(int(id)), nil
+	return userID, nil
 }
 
-func (s *Storage) GetUser(ctx context.Context, email string) (models.User, error) {
+func (s *Storage) GetUser(ctx context.Context, login string) (models.User, error) {
 	const op = "storage.sqlite.GetUser"
 
-	stmt, err := s.db.Prepare("SELECT id, email, pass_hash FROM users WHERE email = ?")
+	stmt, err := s.db.Prepare("SELECT user_id, login, pass_hash FROM users WHERE login = ?")
 	if err != nil {
 		return models.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	row := stmt.QueryRowContext(ctx, email)
+	row := stmt.QueryRowContext(ctx, login)
 
 	var user models.User
-	err = row.Scan(&user.ID, &user.Email, &user.PassHash)
+	err = row.Scan(&user.ID, &user.Login, &user.PassHash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, storage.ErrUserNotFound

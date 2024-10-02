@@ -50,7 +50,7 @@ func NewAuthService(
 // If user doesn't exist, returns error.
 func (a *Auth) Login(
 	ctx context.Context,
-	email string,
+	login string,
 	password string,
 	appID int,
 ) (string, error) {
@@ -58,7 +58,7 @@ func (a *Auth) Login(
 
 	a.logger.Info("attempting to login a user")
 
-	user, err := a.usrProvider.GetUser(ctx, email)
+	user, err := a.usrProvider.GetUser(ctx, login)
 	if err != nil {
 		if errors.Is(err, storagepkg.ErrUserNotFound) {
 			a.logger.Errorw("user not found", "error", err)
