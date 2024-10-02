@@ -33,12 +33,13 @@ var (
 	ErrUserIDIsMissing     = errors.New("user ID is missing")
 )
 
-func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
+// SendMessage method establishes GRPC connection with Chat-client service and makes a request to send a message.
+func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest, requestID string) (*pb.SendMessageResponse, error) {
 	const op = "grpcgateway.SendMessage"
-	g.logger.Infow("starting connection with chat-client service")
+	g.logger.Infow("starting connection with chat-client service", "request ID", requestID)
 	conn, err := discovery.ServiceConnection(ctx, "chat-client", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to chat-client", "op", op, "req", req, "error", err)
+		g.logger.Errorw("error while connecting to chat-client", "op", op, "requestID", requestID, "req", req, "error", err)
 		return nil, err
 	}
 
@@ -51,7 +52,7 @@ func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (
 		st, ok := status.FromError(err)
 		if ok {
 			if st.Code() == codes.InvalidArgument {
-				g.logger.Errorw("error while sending message", "op", op, "req", req, "error", err)
+				g.logger.Errorw("error while sending message", "op", op, "requestID", requestID, "req", req, "error", err)
 				return nil, fmt.Errorf("%s: %s", op, st.Message())
 			}
 		}
@@ -61,13 +62,15 @@ func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (
 	return res, err
 }
 
-func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStreamRequest, messages chan<- *pb.Message) error {
+// GetMessagesStream method establishes persistent GRPC connection with Chat-client service and gets a stream of messages
+// for all chats, where the given user is on participants.
+func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStreamRequest, messages chan<- *pb.Message, requestID string) error {
 	const op = "grpcgateway.GetMessagesStream"
-	g.logger.Infow("starting connection with chat-client service", "op", op)
+	g.logger.Infow("starting connection with chat-client service", "op", op, "requestID", requestID)
 
 	conn, err := discovery.ServiceConnection(ctx, "chat-client", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to chat-client", "op", op, "req", req, "error", err)
+		g.logger.Errorw("error while connecting to chat-client", "op", op, "requestID", requestID, "req", req, "error", err)
 		return err
 	}
 
@@ -126,20 +129,21 @@ func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStre
 			messages <- msg
 		case err := <-errChan:
 			// Handle any error from stream.Recv()
-			g.logger.Errorw("error while receiving message", "op", op, "userID", req.GetUserId(), "error", err)
+			g.logger.Errorw("error while receiving message", "op", op, "requestID", requestID, "userID", req.GetUserId(), "error", err)
 			return err
 		}
 	}
 
 }
 
-func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+// Login method establishes GRPC connection with SSO service and makes a request to log in a user.
+func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest, requestID string) (*pb.LoginResponse, error) {
 	const op = "grpcgateway.Login"
 	g.logger.Infow("starting connection with sso service")
 
 	conn, err := discovery.ServiceConnection(ctx, "sso", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to sso service", "op", op, "req", req, "error", err)
+		g.logger.Errorw("error while connecting to sso service", "op", op, "requestID", requestID, "req", req, "error", err)
 		return nil, err
 	}
 
@@ -152,7 +156,7 @@ func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginRes
 		st, ok := status.FromError(err)
 		if ok {
 			if st.Code() == codes.InvalidArgument {
-				g.logger.Errorw("error while logging in", "op", op, "req", req, "error", err)
+				g.logger.Errorw("error while logging in", "op", op, "requestID", requestID, "req", req, "error", err)
 				return nil, fmt.Errorf("%s: %s", op, st.Message())
 			}
 		}
@@ -162,17 +166,18 @@ func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginRes
 	return res, err
 }
 
-func (g *Gateway) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+// Register method establishes GRPC connection with SSO service and makes a request to register a user.
+func (g *Gateway) Register(ctx context.Context, req *pb.RegisterRequest, requestID string) (*pb.RegisterResponse, error) {
 	const op = "grpcgateway.Register"
-	g.logger.Infow("starting connection with sso service")
+	g.logger.Infow("starting connection with sso service", "op", op, "requestID", requestID)
 
 	conn, err := discovery.ServiceConnection(ctx, "sso", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to sso service", "op", op, "error", err)
+		g.logger.Errorw("error while connecting to sso service", "op", op, "requestID", requestID, "error", err)
 		return nil, err
 	}
 
-	g.logger.Infow("connected to sso service")
+	g.logger.Infow("connected to sso service", "op", op, "requestID", requestID)
 
 	client := pb.NewAuthServiceClient(conn)
 	res, err := client.Register(context.Background(), req)
@@ -181,7 +186,7 @@ func (g *Gateway) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Re
 		st, ok := status.FromError(err)
 		if ok {
 			if st.Code() == codes.InvalidArgument {
-				g.logger.Errorw("error while registering", "op", op, "req", req, "error", err)
+				g.logger.Errorw("error while registering", "op", op, "requestID", requestID, "req", req, "error", err)
 				return nil, fmt.Errorf("%s: %s", op, st.Message())
 			}
 		}
