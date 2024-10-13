@@ -2,39 +2,40 @@ package main
 
 import (
 	"context"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
-	"github.com/zoninnik89/messenger/sso/internal/app"
-	"github.com/zoninnik89/messenger/sso/internal/config"
-	"github.com/zoninnik89/messenger/sso/internal/logging"
+	"github.com/zoninnik89/messenger/facade-service/internal/config"
+	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/chat/send-message"
+	"github.com/zoninnik89/messenger/facade-service/internal/logging"
 	"go.uber.org/zap"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
 func main() {
 	cfg := config.MustLoad()
-	logger := logging.InitLogger().Sugar()
+	logger := logging.InitLogger()
+	defer logging.Sync()
 
-	logger.Info("starting sso service")
+	logger.Info("starting facade service")
 
-	registry, err := consul.NewRegistry(cfg.GRPC.Address, cfg.Consul.Port)
+	registry, err := consul.NewRegistry(cfg.HTTPServer.Address, cfg.Consul.Port)
 	if err != nil {
 		logger.Panic("failed to connect to Consul", zap.Error(err))
 		panic(err)
 	}
 
 	ctx := context.Background()
-	instanceID := discovery.GenerateInstanceID(cfg.GRPC.Name)
+	instanceID := discovery.GenerateInstanceID(cfg.HTTPServer.Name)
 	if err := registry.Register(
 		ctx,
 		instanceID,
-		cfg.GRPC.Address,
-		cfg.GRPC.Port,
-		cfg.GRPC.Name,
+		cfg.HTTPServer.Address,
+		cfg.HTTPServer.Port,
+		cfg.HTTPServer.Name,
 	); err != nil {
+
 		logger.Panic("failed to register service", zap.Error(err))
 		panic(err)
 	}
@@ -55,17 +56,12 @@ func main() {
 		}
 	}(registry, ctx, instanceID)
 
-	application := app.NewApp(cfg.GRPC.Port, logger, cfg.StoragePath, cfg.TokenTTL)
-	go application.GRPCsrv.MustRun()
+	router := chi.NewRouter()
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
-
-	s := <-stop
-
-	logger.Infow("shutting down gracefully", "signal", s)
-
-	application.GRPCsrv.Stop()
-
-	logger.Info("shut down gracefully")
+	router.Post("/send", send_message.New())
 }

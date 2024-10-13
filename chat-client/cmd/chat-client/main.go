@@ -2,100 +2,82 @@ package main
 
 import (
 	"context"
+	"github.com/zoninnik89/messenger/chat-client/internal/app"
+	"github.com/zoninnik89/messenger/chat-client/internal/config"
 	"github.com/zoninnik89/messenger/chat-client/internal/logging"
 	kafkaProducer "github.com/zoninnik89/messenger/chat-client/internal/producer"
-	"github.com/zoninnik89/messenger/chat-client/internal/service"
-	common "github.com/zoninnik89/messenger/common"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
 	zap "go.uber.org/zap"
-	"google.golang.org/grpc"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
-var (
-	serviceName   = "chat-client"
-	grpcAddress   = common.EnvString("GRPC_ADDR", ":2001")
-	consulAddress = common.EnvString("CONSUL_ADDR", ":8500")
-)
-
 func main() {
+	cfg := config.MustLoad()
 	logger := logging.InitLogger()
 	defer logging.Sync()
 
-	registry, err := consul.NewRegistry(consulAddress, serviceName)
+	logger.Info("starting chat-client service")
+
+	registry, err := consul.NewRegistry(cfg.GRPC.Address, cfg.Consul.Port)
 	if err != nil {
 		logger.Panic("failed to connect to Consul", zap.Error(err))
 		panic(err)
 	}
 
 	ctx := context.Background()
-	instanceID := discovery.GenerateInstanceID(serviceName)
-	if err := registry.Register(ctx, instanceID, serviceName, grpcAddress); err != nil {
+	instanceID := discovery.GenerateInstanceID(cfg.GRPC.Name)
+	if err := registry.Register(
+		ctx,
+		instanceID,
+		cfg.GRPC.Address,
+		cfg.GRPC.Port,
+		cfg.GRPC.Name,
+	); err != nil {
+
 		logger.Panic("failed to register service", zap.Error(err))
 		panic(err)
 	}
 
 	go func() {
 		for {
-			if err := registry.HealthCheck(instanceID, serviceName); err != nil {
+			if err := registry.HealthCheck(instanceID); err != nil {
 				logger.Warn("failed to health check", zap.Error(err))
 			}
 			time.Sleep(time.Second * 1)
 		}
 	}()
 
-	defer func(registry *consul.Registry, ctx context.Context, instanceID string, serviceName string) {
-		err := registry.Deregister(ctx, instanceID, serviceName)
+	defer func(registry *consul.Registry, ctx context.Context, instanceID string) {
+		err := registry.Deregister(ctx, instanceID)
 		if err != nil {
 			logger.Fatal("failed to deregister service", zap.Error(err))
 		}
-	}(registry, ctx, instanceID, serviceName)
+	}(registry, ctx, instanceID)
 
-	newGateway := discovery.Registry(registry)
+	//ctxWithCancel, cancel := context.WithCancel(ctx)
 
-	conn, err := discovery.ServiceConnection(ctx, "pub-sub", newGateway)
-	if err != nil {
-		logger.Fatal("failed to dial pub-sub server", zap.Error(err))
-	}
-	defer func(conn *grpc.ClientConn) {
-		err := conn.Close()
-		if err != nil {
-			logger.Warn("failed to close connection with Pub-Sub server", zap.Error(err))
-		}
-	}(conn)
-
-	kp, err := kafkaProducer.NewKafkaProducer()
+	queue, err := kafkaProducer.NewKafkaProducer()
 	if err != nil {
 		logger.Panic("failed to connect to Kafka", zap.Error(err))
 	}
-	defer kp.Producer.Flush(10)
+	defer queue.Producer.Flush(10)
 
-	client := service.NewChatClient(conn, kp)
+	application := app.NewApp(cfg.GRPC.Port, registry, queue)
+	go application.GRPCsrv.MustRun()
 
-	go client.SubscribeToChat("test", "chatroom1")
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 
-	time.Sleep(2 * time.Second)
+	s := <-stop
 
-	client.SendMessage("chatroom1", "testID", "Hello, everyone!")
+	logger.Info("shutting down gracefully", zap.Any("signal", s))
 
-	select {}
+	//cancel()
+	application.GRPCsrv.Stop()
 
-	//grpcServer := grpc.NewServer()
-	//
-	//listner, err := net.Listen("tcp", grpcAddress)
-	//if err != nil {
-	//	logger.Fatal("failed to listen:", zap.Error(err))
-	//}
-	//defer listner.Close()
-
-	//service := NewChatClient()
-	//NewGrpcHandler(grpcServer, service)
-	//
-	//logger.Info("Starting HTTP server", zap.String("port", grpcAddress))
-	//
-	//if err := grpcServer.Serve(listner); err != nil {
-	//	logger.Fatal("failed to serve", zap.Error(err))
-	//}
-
+	logger.Info("shut down gracefully")
 }

@@ -32,9 +32,9 @@ func NewKafkaProducer() (*MessageProducer, error) {
 	}, nil
 }
 
-func (p *MessageProducer) Publish(msg string, topic string, key []byte, deliveryChan chan kafka.Event) error {
+func (p *MessageProducer) Publish(msg []byte, topic string, key []byte, deliveryChan chan kafka.Event) error {
 	message := &kafka.Message{
-		Value:          []byte(msg),
+		Value:          msg,
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Key:            key,
 	}
@@ -56,9 +56,9 @@ func (p *MessageProducer) DeliveryReport(deliveryChan chan kafka.Event) {
 			msg := e.(*kafka.Message)
 
 			if msg.TopicPartition.Error != nil {
-				log.Println("Message was not published")
+				log.Println("message was not published")
 			} else {
-				log.Println("Message published", msg.TopicPartition)
+				log.Println("message published", msg.TopicPartition)
 			}
 		}
 	}

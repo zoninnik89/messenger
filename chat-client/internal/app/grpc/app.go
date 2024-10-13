@@ -13,8 +13,8 @@ import (
 type App struct {
 	logger     *zap.SugaredLogger
 	grpcServer *grpc.Server
-	port       int
 	service    types.ChatClientInterface
+	port       int
 }
 
 func NewApp(chatClientService types.ChatClientInterface, port int) *App {
@@ -38,7 +38,7 @@ func (a *App) MustRun() {
 
 func (a *App) Run() error {
 	const op = "grpcapp.Run"
-	a.logger.Infow(op, "starting grpc server", "op", op, "port", a.port)
+	a.logger.Infow("starting grpc server", "op", op, "port", a.port)
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
 	if err != nil {
@@ -47,10 +47,10 @@ func (a *App) Run() error {
 
 	addr := l.Addr().String()
 
-	a.logger.Infow(op, "grpc server is listening", "op", op, "addr", addr)
+	a.logger.Infow("grpc server is listening", "op", op, "addr", addr)
 
 	if err := a.grpcServer.Serve(l); err != nil {
-		a.logger.Fatalw(op, "failed to serve", "op", op, "err", err)
+		a.logger.Fatalw("failed to serve", "op", op, "err", err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -59,6 +59,6 @@ func (a *App) Run() error {
 
 func (a *App) Stop() {
 	const op = "grpcapp.Stop"
-	a.logger.Infow(op, "stopping grpc server", "op", op, "port", a.port)
+	a.logger.Infow("stopping grpc server", "op", op, "port", a.port)
 	a.grpcServer.GracefulStop()
 }

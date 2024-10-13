@@ -49,9 +49,9 @@ func (a *App) MustConsume(ctx context.Context, consumer *kafka.Consumer) {
 	for {
 		status, err := a.service.ConsumeAndSendoutMessage(ctx, consumer)
 		if err != nil {
-			a.logger.Warn("error consuming a message", "op", op, err, zap.Error(err))
+			a.logger.Warnw("error consuming a message", "op", op, err, zap.Error(err))
 		} else {
-			a.logger.Info("message was consumed with status", "op", op, err, zap.String("message", status))
+			a.logger.Infow("message was consumed", "op", op, "status", status)
 		}
 
 		time.Sleep(time.Second * 1)
@@ -60,7 +60,7 @@ func (a *App) MustConsume(ctx context.Context, consumer *kafka.Consumer) {
 
 func (a *App) Run() error {
 	const op = "grpcapp.Run"
-	a.logger.Infow("starting grpc server at", "op", op, "port", a.port)
+	a.logger.Infow("starting grpc server", "op", op, "port", a.port)
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
 	if err != nil {
@@ -70,7 +70,7 @@ func (a *App) Run() error {
 
 	addr := l.Addr().String()
 
-	a.logger.Infow("grpc server is running", "op", op, "addr", addr)
+	a.logger.Infow("grpc server is listening", "op", op, "addr", addr)
 
 	if err := a.grpcServer.Serve(l); err != nil {
 		a.logger.Fatalw("failed to serve", "op", op, "err", err)

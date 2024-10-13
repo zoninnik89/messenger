@@ -1,8 +1,11 @@
 package types
 
-import pb "github.com/zoninnik89/messenger/common/api"
+import (
+	"context"
+	pb "github.com/zoninnik89/messenger/common/api"
+)
 
 type ChatClientInterface interface {
-	SubscribeToChat(chat string)
-	SendMessage(chat string, message pb.Message)
+	SubscribeForMessages(ctx context.Context, userID string, stream pb.ChatClientService_GetMessagesStreamServer) error
+	SendMessage(messageID string, chatID string, senderID string, messageText string, sentTime string) error
 }

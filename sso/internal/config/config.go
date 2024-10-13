@@ -13,11 +13,18 @@ type Config struct {
 	StoragePath string        `yaml:"storage_path" env-required:"true"`
 	TokenTTL    time.Duration `yaml:"token_ttl" env-required:"true"`
 	GRPC        GRPCConfig    `yaml:"grpc"`
+	Consul      ConsulConfig  `yaml:"consul"`
 }
 
 type GRPCConfig struct {
+	Address string        `yaml:"address"`
 	Port    int           `yaml:"port"`
+	Name    string        `yaml:"name"`
 	Timeout time.Duration `yaml:"timeout"`
+}
+
+type ConsulConfig struct {
+	Port int `yaml:"port"`
 }
 
 func MustLoad() *Config {

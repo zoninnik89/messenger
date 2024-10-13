@@ -18,7 +18,7 @@ func Register(srv *grpc.Server, service types.PubSubServiceInterface) {
 }
 
 func (h *serverAPI) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_SubscribeServer) error {
-	if err := validateChat(req); err != nil {
+	if err := validateUser(req); err != nil {
 		return err
 	}
 
@@ -30,7 +30,7 @@ func (h *serverAPI) Subscribe(req *pb.SubscribeRequest, stream pb.PubSubService_
 	return nil
 }
 
-func validateChat(req *pb.SubscribeRequest) error {
+func validateUser(req *pb.SubscribeRequest) error {
 	if req.GetUserId() == "" {
 		return status.Errorf(codes.InvalidArgument, "user id is required")
 	}

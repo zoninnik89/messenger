@@ -12,16 +12,16 @@ service AuthService {
 }
 
 message RegisterRequest {
-  string email = 1; // Email of a user to be registered.
+  string login = 1; // Email of a user to be registered.
   string password = 2; // Password of a user to be registered.
 }
 
 message RegisterResponse {
-  int64 user_id = 1; // User ID of the registered user.
+  string user_id = 1; // User ID of the registered user.
 }
 
 message LoginRequest {
-  string email = 1; // Email of a user to be logged in.
+  string login = 1; // Email of a user to be logged in.
   string password = 2; // Password of a user to be logged in.
   int32 app_id = 3; // ID of the app to be logged in.
 }
@@ -51,7 +51,7 @@ message SubscribeRequest {
 
 // Chat client
 
-service ChatClient{
+service ChatClientService{
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc GetMessagesStream(GetMessagesStreamRequest) returns (stream Message);
 }
