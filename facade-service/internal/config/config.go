@@ -1,10 +1,13 @@
 package config
 
 import (
-	"github.com/ilyakaznacheev/cleanenv"
+	"flag"
 	"log"
 	"os"
 	"time"
+
+	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/zoninnik89/messenger/common"
 )
 
 type Config struct {
@@ -26,7 +29,7 @@ type ConsulConfig struct {
 }
 
 func MustLoad() *Config {
-	config := os.Getenv("CONFIG_PATH")
+	config := fetchConfigPath()
 	if config == "" {
 		log.Fatal("CONFIG_PATH environment variable not set")
 	}
@@ -42,4 +45,16 @@ func MustLoad() *Config {
 	}
 
 	return &cfg
+}
+
+func fetchConfigPath() string {
+	var res string
+
+	flag.StringVar(&res, "config", "", "config file")
+	flag.Parse()
+
+	if res == "" {
+		res = common.EnvString("CONFIG_PATH", "../../config/local.yaml")
+	}
+	return res
 }

@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+
 	pb "github.com/zoninnik89/messenger/common/api"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io"
-	"log"
 )
 
 type Gateway struct {
@@ -34,12 +35,12 @@ var (
 )
 
 // SendMessage method establishes GRPC connection with Chat-client service and makes a request to send a message.
-func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest, requestID string) (*pb.SendMessageResponse, error) {
+func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
 	const op = "grpcgateway.SendMessage"
-	g.logger.Infow("starting connection with chat-client service", "request ID", requestID)
+	g.logger.Infow("starting connection with chat-client service")
 	conn, err := discovery.ServiceConnection(ctx, "chat-client", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to chat-client", "op", op, "requestID", requestID, "req", req, "error", err)
+		g.logger.Errorw("error while connecting to chat-client", "op", op, "req", req, "error", err)
 		return nil, err
 	}
 
@@ -52,7 +53,7 @@ func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest, r
 		st, ok := status.FromError(err)
 		if ok {
 			if st.Code() == codes.InvalidArgument {
-				g.logger.Errorw("error while sending message", "op", op, "requestID", requestID, "req", req, "error", err)
+				g.logger.Errorw("error while sending message", "op", op, "req", req, "error", err)
 				return nil, fmt.Errorf("%s: %s", op, st.Message())
 			}
 		}
@@ -64,13 +65,13 @@ func (g *Gateway) SendMessage(ctx context.Context, req *pb.SendMessageRequest, r
 
 // GetMessagesStream method establishes persistent GRPC connection with Chat-client service and gets a stream of messages
 // for all chats, where the given user is on participants.
-func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStreamRequest, messages chan<- *pb.Message, requestID string) error {
+func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStreamRequest, messages chan<- *pb.Message) error {
 	const op = "grpcgateway.GetMessagesStream"
-	g.logger.Infow("starting connection with chat-client service", "op", op, "requestID", requestID)
+	g.logger.Infow("starting connection with chat-client service", "op", op)
 
 	conn, err := discovery.ServiceConnection(ctx, "chat-client", g.registry)
 	if err != nil {
-		g.logger.Errorw("error while connecting to chat-client", "op", op, "requestID", requestID, "req", req, "error", err)
+		g.logger.Errorw("error while connecting to chat-client", "op", op, "req", req, "error", err)
 		return err
 	}
 
@@ -129,7 +130,7 @@ func (g *Gateway) GetMessagesStream(ctx context.Context, req *pb.GetMessagesStre
 			messages <- msg
 		case err := <-errChan:
 			// Handle any error from stream.Recv()
-			g.logger.Errorw("error while receiving message", "op", op, "requestID", requestID, "userID", req.GetUserId(), "error", err)
+			g.logger.Errorw("error while receiving message", "op", op, "userID", req.GetUserId(), "error", err)
 			return err
 		}
 	}
