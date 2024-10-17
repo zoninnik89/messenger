@@ -71,7 +71,6 @@ func New(g *grpcgateway.Gateway, senderID string) http.HandlerFunc {
 			SentTs:      strconv.FormatInt(sentTS, 10),
 		}
 
-		// Add call to GRPC handler
 		res, err := g.SendMessage(context.Background(), &pb.SendMessageRequest{
 			Message: message,
 		}, requestID)

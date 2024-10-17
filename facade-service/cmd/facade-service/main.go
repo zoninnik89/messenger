@@ -2,15 +2,21 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
 	"github.com/zoninnik89/messenger/facade-service/internal/config"
-	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/chat/send-message"
+	grpcgateway "github.com/zoninnik89/messenger/facade-service/internal/gateway"
+	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/auth/login"
+	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/auth/register"
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
+	websocketserver "github.com/zoninnik89/messenger/facade-service/internal/websocket-server"
 	"go.uber.org/zap"
-	"time"
+	"golang.org/x/net/websocket"
 )
 
 func main() {
@@ -56,6 +62,8 @@ func main() {
 		}
 	}(registry, ctx, instanceID)
 
+	gateway := grpcgateway.NewGRPCGateway(registry)
+
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
@@ -63,5 +71,10 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/send", send_message.New())
+	router.Post("/login", login.New(gateway))
+	router.Post("/register", register.New(gateway))
+
+	wsServer := websocketserver.NewWebsocketServer()
+	http.Handle("/ws", websocket.Handler(wsServer.HandleWS))
+	http.ListenAndServe(":3000", nil)
 }
