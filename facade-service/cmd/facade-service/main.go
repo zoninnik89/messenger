@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
+	"strconv"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
 	"github.com/zoninnik89/messenger/facade-service/internal/config"
@@ -16,7 +20,6 @@ import (
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
 	websocketserver "github.com/zoninnik89/messenger/facade-service/internal/websocket-server"
 	"go.uber.org/zap"
-	"golang.org/x/net/websocket"
 )
 
 func main() {
@@ -24,7 +27,9 @@ func main() {
 	logger := logging.InitLogger()
 	defer logging.Sync()
 
-	logger.Info("starting facade service")
+	strPort := strconv.Itoa(cfg.HTTPServer.Port)
+
+	logger.Info("starting facade service", zap.String("port", strPort))
 
 	registry, err := consul.NewRegistry(cfg.HTTPServer.Address, cfg.Consul.Port)
 	if err != nil {
@@ -71,10 +76,27 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
+	// Basic CORS configuration
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},                                       // Allow all origins
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Allow specific methods
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true, // Allow cookies to be sent
+		MaxAge:           300,  // Maximum value for the preflight request cache
+	}))
+
 	router.Post("/login", login.New(gateway))
 	router.Post("/register", register.New(gateway))
 
-	wsServer := websocketserver.NewWebsocketServer()
-	http.Handle("/ws", websocket.Handler(wsServer.HandleWS))
-	http.ListenAndServe(":3000", nil)
+	wsServer := websocketserver.NewWebsocketServer(gateway)
+
+	router.Get("/ws", wsServer.ServeHTTP)
+
+	// Start the server using http.Serve with the custom listener
+	logger.Info("http server is listening", zap.String("port", "3002"))
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", "3002"), router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
+
 }

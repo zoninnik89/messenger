@@ -3,6 +3,10 @@ package send_message
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -11,9 +15,6 @@ import (
 	grpcgateway "github.com/zoninnik89/messenger/facade-service/internal/gateway"
 	"github.com/zoninnik89/messenger/facade-service/internal/lib/response"
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 type Request struct {
@@ -71,9 +72,12 @@ func New(g *grpcgateway.Gateway, senderID string) http.HandlerFunc {
 			SentTs:      strconv.FormatInt(sentTS, 10),
 		}
 
-		res, err := g.SendMessage(context.Background(), &pb.SendMessageRequest{
-			Message: message,
-		}, requestID)
+		res, err := g.SendMessage(
+			context.Background(),
+			&pb.SendMessageRequest{
+				Message: message,
+			},
+		)
 
 		if err != nil {
 			if errors.Is(err, grpcgateway.ErrInternalServerError) {

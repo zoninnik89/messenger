@@ -1,8 +1,6 @@
 package websocketserver
 
 import (
-	"io"
-
 	"context"
 	"encoding/json"
 	"fmt"
@@ -108,7 +106,7 @@ func (s *WebsocketServer) HandleWS(ws *websocket.Conn, r *http.Request) {
 			}
 
 			// Send the message to the WebSocket
-			if err := ws.Write(websocket.TextMessage, messageData); err != nil {
+			if err := ws.WriteMessage(websocket.TextMessage, messageData); err != nil {
 				s.logger.Errorw("failed to send message to WebSocket", "op", op, "error", err)
 				break
 			}
@@ -122,22 +120,21 @@ func (s *WebsocketServer) HandleWS(ws *websocket.Conn, r *http.Request) {
 func (s *WebsocketServer) ReadLoop(ws *websocket.Conn, userID string) {
 	const op = "websocketserver.readLoop"
 
-	buf := make([]byte, 1024)
 	for {
-		n, err := ws.Read(buf)
+		// Read a message from the WebSocket
+		messageType, messageData, err := ws.ReadMessage()
 		if err != nil {
-			if err == io.EOF {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				s.logger.Errorw("unexpected WebSocket closure", "op", op, "err", err)
+			} else {
 				s.logger.Infow("client closed WebSocket connection", "op", op, "err", err)
-				break
 			}
-			s.logger.Errorw("error reading from WebSocket", "op", op, "err", err)
-			continue
+			break
 		}
-		msg := buf[:n]
-		s.logger.Infow("message received", "op", op, "message", string(msg))
+		s.logger.Infow("message received", "op", op, "userID", userID, "messageType", messageType, "message", string(messageData))
 
 		var messageParsed Message
-		err = json.Unmarshal(msg, &messageParsed)
+		err = json.Unmarshal(messageData, &messageParsed)
 		if err != nil {
 			s.logger.Errorw("error unmarshaling JSON message", "op", op, "err", err)
 			continue
@@ -158,7 +155,6 @@ func (s *WebsocketServer) ReadLoop(ws *websocket.Conn, userID string) {
 			},
 		)
 
-		ws.Write([]byte("message sent"))
 	}
 
 	s.cleanupConnection(ws)

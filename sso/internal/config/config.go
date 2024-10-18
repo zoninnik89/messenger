@@ -2,10 +2,11 @@ package config
 
 import (
 	"flag"
-	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/zoninnik89/messenger/common"
 	"os"
 	"time"
+
+	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/zoninnik89/messenger/common"
 )
 
 type Config struct {
@@ -58,7 +59,7 @@ func fetchConfigPath() string {
 	flag.Parse()
 
 	if res == "" {
-		res = common.EnvString("CONFIG_PATH", "./config/local.yaml")
+		res = common.EnvString("CONFIG_PATH", "../../config/local.yaml")
 	}
 	return res
 }

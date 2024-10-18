@@ -13,3 +13,9 @@ CREATE TABLE IF NOT EXISTS apps
     name TEXT NOT NULL UNIQUE,
     secret TEXT NOT NULL UNIQUE
 );
+
+-- Insert a new record into the apps table after creating it
+
+INSERT INTO apps (id, name, secret)
+VALUES (1,'app', 'secret')
+ON CONFLICT DO NOTHING;
