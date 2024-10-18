@@ -54,7 +54,7 @@ func fetchConfigPath() string {
 	flag.Parse()
 
 	if res == "" {
-		res = common.EnvString("CONFIG_PATH", "../../config/local.yaml")
+		res = common.EnvString("CONFIG_PATH", "./config/local.yaml")
 	}
 	return res
 }
