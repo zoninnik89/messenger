@@ -46,28 +46,15 @@ type Message struct {
 }
 
 func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Upgrade the HTTP connection to a WebSocket connection
-	ws, err := upgrader.Upgrade(w, r, nil)
+	// Access the cookies
+	cookie, err := r.Cookie("token")
 	if err != nil {
-		s.logger.Errorw("failed to upgrade to WebSocket", "error", err)
+		s.logger.Errorw("missing or invalid JWT token cookie", "error", err)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	// Pass the original HTTP request to the HandleWS function
-	s.HandleWS(ws, r)
-}
-
-func (s *WebsocketServer) HandleWS(ws *websocket.Conn, r *http.Request) {
-	const op = "websocketserver.handleWS"
-	s.logger.Infow("new incomming connection from client", "op", op, "addr", ws.RemoteAddr())
-
-	// Get the JWT token from the request header
-	jwtToken := r.Header.Get("Authorization")
-	if jwtToken == "" {
-		s.logger.Errorw("missing Authorization header", "op", op)
-		ws.Close()
-		return
-	}
+	jwtToken := cookie.Value
 
 	// remove the "Bearer " prefix if present
 	if len(jwtToken) > 7 && jwtToken[:7] == "Bearer " {
@@ -76,10 +63,24 @@ func (s *WebsocketServer) HandleWS(ws *websocket.Conn, r *http.Request) {
 
 	userID, err := s.validateJWTToken(jwtToken)
 	if err != nil {
-		s.logger.Errorw("invalid JWT token", "op", op, "error", err)
-		ws.Close()
+		s.logger.Errorw("invalid JWT token", "error", err)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+
+	// Upgrade to WebSocket if the token is valid
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		s.logger.Errorw("failed to upgrade to WebSocket", "error", err)
+		return
+	}
+
+	s.HandleWS(ws, r, userID)
+}
+
+func (s *WebsocketServer) HandleWS(ws *websocket.Conn, r *http.Request, userID string) {
+	const op = "websocketserver.handleWS"
+	s.logger.Infow("new incomming connection from client", "op", op, "addr", ws.RemoteAddr())
 
 	s.conns[ws] = true // add mutex
 
