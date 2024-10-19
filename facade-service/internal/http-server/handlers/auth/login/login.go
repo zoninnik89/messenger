@@ -83,8 +83,8 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 			Value:    res.GetToken(),
 			Path:     "/",
 			HttpOnly: true,                           // Prevent JavaScript access
-			Secure:   true,                           // Ensure it's sent only over HTTPS
-			SameSite: http.SameSiteStrictMode,        // Prevent CSRF attacks
+			Secure:   false,                          // Ensure it's sent only over HTTPS
+			SameSite: http.SameSiteLaxMode,           // Prevent CSRF attacks
 			Expires:  time.Now().Add(24 * time.Hour), // Set expiration time
 		})
 

@@ -78,9 +78,9 @@ func main() {
 
 	// Basic CORS configuration
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},                                       // Allow all origins
+		AllowedOrigins:   []string{"http://localhost:3001"},                   // Allow all origins
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Allow specific methods
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "auth_token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true, // Allow cookies to be sent
 		MaxAge:           300,  // Maximum value for the preflight request cache

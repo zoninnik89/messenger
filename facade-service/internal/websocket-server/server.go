@@ -47,14 +47,12 @@ type Message struct {
 
 func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Access the cookies
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		s.logger.Errorw("missing or invalid JWT token cookie", "error", err)
+	jwtToken := r.URL.Query().Get("token")
+	if jwtToken == "" {
+		s.logger.Errorw("missing or invalid JWT token", "error", "missing token", "token", jwtToken)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
-	jwtToken := cookie.Value
 
 	// remove the "Bearer " prefix if present
 	if len(jwtToken) > 7 && jwtToken[:7] == "Bearer " {
@@ -80,7 +78,7 @@ func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *WebsocketServer) HandleWS(ws *websocket.Conn, userID string) {
 	const op = "websocketserver.handleWS"
-	s.logger.Infow("new incomming connection from client", "op", op, "addr", ws.RemoteAddr())
+	s.logger.Infow("new incoming connection from client", "op", op, "addr", ws.RemoteAddr())
 
 	s.conns[ws] = true // add mutex
 
