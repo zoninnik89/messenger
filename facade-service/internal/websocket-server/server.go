@@ -78,7 +78,7 @@ func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.HandleWS(ws, r, userID)
 }
 
-func (s *WebsocketServer) HandleWS(ws *websocket.Conn, r *http.Request, userID string) {
+func (s *WebsocketServer) HandleWS(ws *websocket.Conn, userID string) {
 	const op = "websocketserver.handleWS"
 	s.logger.Infow("new incomming connection from client", "op", op, "addr", ws.RemoteAddr())
 
