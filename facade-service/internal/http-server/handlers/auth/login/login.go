@@ -31,6 +31,8 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 		var req Request
 		requestID := middleware.GetReqID(r.Context())
 
+		logger.Infow("received login request", "op", op, "request_id", requestID)
+
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
 			logger.Errorw(
@@ -65,11 +67,11 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 		res, err := g.Login(context.Background(), loginReq, requestID)
 
 		if err != nil {
-			if errors.Is(err, grpcgateway.ErrInternalServerError) {
-				render.JSON(w, r, response.Error("internal server error"))
+			if errors.Is(err, grpcgateway.ErrInvalidLoginOrPassword) {
+				render.JSON(w, r, response.Error("invalid login or password"))
 				return
 			}
-			render.JSON(w, r, response.Error("not valid login request"))
+			render.JSON(w, r, response.Error("internal server error"))
 			return
 		}
 

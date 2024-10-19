@@ -31,6 +31,8 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 		var req Request
 		requestID := middleware.GetReqID(r.Context())
 
+		logger.Infow("received register request", "op", op, "request_id", requestID)
+
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
 			logger.Errorw(

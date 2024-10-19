@@ -30,8 +30,9 @@ func NewGRPCGateway(r discovery.Registry) *Gateway {
 
 var (
 	ErrInternalServerError = errors.New("internal server error")
-	ErrOneOfFieldsMissing  = errors.New("one of the fields are missing")
-	ErrUserIDIsMissing     = errors.New("user ID is missing")
+	// ErrOneOfFieldsMissing     = errors.New("one of the fields are missing")
+	ErrUserIDIsMissing        = errors.New("user ID is missing")
+	ErrInvalidLoginOrPassword = errors.New("invalid login or password")
 )
 
 // SendMessage method establishes GRPC connection with Chat-client service and makes a request to send a message.
@@ -142,7 +143,7 @@ func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest, requestID str
 	const op = "grpcgateway.Login"
 	g.logger.Infow("starting connection with sso service")
 
-	conn, err := discovery.ServiceConnection(ctx, "sso", g.registry)
+	conn, err := discovery.ServiceConnection(ctx, "sso-service", g.registry)
 	if err != nil {
 		g.logger.Errorw("error while connecting to sso service", "op", op, "requestID", requestID, "req", req, "error", err)
 		return nil, err
@@ -158,10 +159,10 @@ func (g *Gateway) Login(ctx context.Context, req *pb.LoginRequest, requestID str
 		if ok {
 			if st.Code() == codes.InvalidArgument {
 				g.logger.Errorw("error while logging in", "op", op, "requestID", requestID, "req", req, "error", err)
-				return nil, fmt.Errorf("%s: %s", op, st.Message())
+				return nil, ErrInvalidLoginOrPassword
 			}
 		}
-		return nil, ErrInternalServerError
+		return nil, ErrInvalidLoginOrPassword
 	}
 
 	return res, err
@@ -188,7 +189,7 @@ func (g *Gateway) Register(ctx context.Context, req *pb.RegisterRequest, request
 		if ok {
 			if st.Code() == codes.InvalidArgument {
 				g.logger.Errorw("error while registering", "op", op, "requestID", requestID, "req", req, "error", err)
-				return nil, fmt.Errorf("%s: %s", op, st.Message())
+				return nil, ErrInvalidLoginOrPassword
 			}
 		}
 		return nil, ErrInternalServerError
