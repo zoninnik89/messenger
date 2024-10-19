@@ -75,7 +75,7 @@ func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.HandleWS(ws, r, userID)
+	s.HandleWS(ws, userID)
 }
 
 func (s *WebsocketServer) HandleWS(ws *websocket.Conn, userID string) {
@@ -85,6 +85,7 @@ func (s *WebsocketServer) HandleWS(ws *websocket.Conn, userID string) {
 	s.conns[ws] = true // add mutex
 
 	messagesChan := make(chan *pb.Message)
+	done := make(chan struct{})
 
 	// Start a goroutine to establish the gRPC stream and read messages
 	go func() {
@@ -98,27 +99,34 @@ func (s *WebsocketServer) HandleWS(ws *websocket.Conn, userID string) {
 
 	// Start a goroutine to read messages from the gRPC stream and send to WebSocket
 	go func() {
-		for msg := range messagesChan {
-			// Serialize the message to JSON
-			messageData, err := json.Marshal(msg)
-			if err != nil {
-				s.logger.Errorw("failed to marshal message", "op", op, "error", err)
-				continue
-			}
+		for {
+			select {
+			case msg := <-messagesChan:
+				// Serialize the message to JSON
+				messageData, err := json.Marshal(msg)
+				if err != nil {
+					s.logger.Errorw("failed to marshal message", "op", op, "error", err)
+					continue
+				}
 
-			// Send the message to the WebSocket
-			if err := ws.WriteMessage(websocket.TextMessage, messageData); err != nil {
-				s.logger.Errorw("failed to send message to WebSocket", "op", op, "error", err)
-				break
+				// Send the message to the WebSocket
+				if err := ws.WriteMessage(websocket.TextMessage, messageData); err != nil {
+					s.logger.Errorw("failed to send message to WebSocket", "op", op, "error", err)
+					break
+				}
+			case <-done:
+				// Stop reading messages when done signal is received
+				return
 			}
 		}
 	}()
 
-	s.ReadLoop(ws, userID)
+	// Run the ReadLoop in a separate goroutine
+	go s.ReadLoop(ws, userID, done)
 
 }
 
-func (s *WebsocketServer) ReadLoop(ws *websocket.Conn, userID string) {
+func (s *WebsocketServer) ReadLoop(ws *websocket.Conn, userID string, done chan struct{}) {
 	const op = "websocketserver.readLoop"
 
 	for {
@@ -141,23 +149,31 @@ func (s *WebsocketServer) ReadLoop(ws *websocket.Conn, userID string) {
 			continue
 		}
 
+		messageID := uuid.New().String()
+
 		messageToBeSent := &pb.Message{
 			ChatId:      messageParsed.ChatID,
 			SenderId:    userID,
-			MessageId:   uuid.NewString(),
+			MessageId:   messageID,
 			MessageText: messageParsed.MessageText,
 			SentTs:      strconv.FormatInt(time.Now().Unix(), 10),
 		}
 
-		s.gw.SendMessage(
+		_, err = s.gw.SendMessage(
 			context.Background(),
 			&pb.SendMessageRequest{
 				Message: messageToBeSent,
 			},
 		)
+		if err != nil {
+			s.logger.Errorw("failed to send message to WebSocket", "op", op, "messageID", messageID, "error", err)
+		} else {
+			s.logger.Infow("successfully sent message to WebSocket", "op", op, "userID", userID, "messageID", messageID)
+		}
 
 	}
 
+	close(done)
 	s.cleanupConnection(ws)
 }
 
