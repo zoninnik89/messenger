@@ -11,6 +11,7 @@ import (
 	"github.com/zoninnik89/messenger/facade-service/internal/lib/response"
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
 	"net/http"
+	"time"
 )
 
 type Request struct {
@@ -76,6 +77,16 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 		}
 
 		logger.Infow("successful login", "op", op, "request_id", requestID)
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "auth_token",
+			Value:    res.GetToken(),
+			Path:     "/",
+			HttpOnly: true,                           // Prevent JavaScript access
+			Secure:   true,                           // Ensure it's sent only over HTTPS
+			SameSite: http.SameSiteStrictMode,        // Prevent CSRF attacks
+			Expires:  time.Now().Add(24 * time.Hour), // Set expiration time
+		})
 
 		render.JSON(w, r, Response{
 			Response: response.OK(),
