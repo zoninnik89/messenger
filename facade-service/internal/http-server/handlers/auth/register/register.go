@@ -31,6 +31,8 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 		var req Request
 		requestID := middleware.GetReqID(r.Context())
 
+		logger.Infow("received register request", "op", op, "request_id", requestID)
+
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
 			logger.Errorw(
@@ -63,6 +65,12 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 		res, err := g.Register(context.Background(), registerReq, requestID)
 
 		if err != nil {
+			logger.Errorw("failed registering user",
+				"op", op,
+				"request_id", requestID,
+				"error", err.Error(),
+			)
+
 			if errors.Is(err, grpcgateway.ErrInternalServerError) {
 				render.JSON(w, r, response.Error("internal server error"))
 				return
@@ -71,7 +79,7 @@ func New(g *grpcgateway.Gateway) http.HandlerFunc {
 			return
 		}
 
-		logger.Infow("successful register", "op", op, "request_id", requestID)
+		logger.Infow("successful register", "op", op, "user_id", res.GetUserId(), "request_id", requestID)
 
 		render.JSON(w, r, Response{
 			Response: response.OK(),

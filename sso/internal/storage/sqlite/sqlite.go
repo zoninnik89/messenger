@@ -30,7 +30,7 @@ func NewStorage(storagePath string) (*Storage, error) {
 func (s *Storage) SaveUser(ctx context.Context, login string, passHash []byte) (string, error) {
 	const op = "storage.sqlite.CreateUser"
 
-	stmt, err := s.db.Prepare("INSERT INTO users (login, pass_hash, user_id) values (?, ?)")
+	stmt, err := s.db.Prepare("INSERT INTO users (login, pass_hash, user_id) values (?, ?, ?)")
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}

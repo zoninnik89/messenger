@@ -17,6 +17,7 @@ func InitLogger() *zap.Logger {
 	once.Do(func() {
 		// Customize Zap logger
 		config := zap.NewProductionConfig()
+		config.DisableStacktrace = true
 		config.EncoderConfig.TimeKey = "timestamp"
 		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 

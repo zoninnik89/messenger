@@ -1,14 +1,15 @@
 package tests
 
 import (
+	"testing"
+	"time"
+
 	"github.com/brianvoe/gofakeit"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	pb "github.com/zoninnik89/messenger/common/api"
 	suite "github.com/zoninnik89/messenger/sso/tests/suite"
-	"testing"
-	"time"
 )
 
 const (
@@ -26,7 +27,7 @@ func TestRegisterLogin_Login_HappyPath(t *testing.T) {
 	pass := randomFakePassword()
 
 	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
-		Email:    email,
+		Login:    email,
 		Password: pass,
 	})
 
@@ -34,7 +35,7 @@ func TestRegisterLogin_Login_HappyPath(t *testing.T) {
 	assert.NotEmpty(t, respReg.GetUserId())
 
 	respLogin, err := st.AuthClient.Login(ctx, &pb.LoginRequest{
-		Email:    email,
+		Login:    email,
 		Password: pass,
 		AppId:    appID,
 	})
@@ -68,7 +69,7 @@ func TestRegisterLogin_Login_RepeatedRegister(t *testing.T) {
 	pass := randomFakePassword()
 
 	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
-		Email:    email,
+		Login:    email,
 		Password: pass,
 	})
 
@@ -76,7 +77,7 @@ func TestRegisterLogin_Login_RepeatedRegister(t *testing.T) {
 	assert.NotEmpty(t, respReg.GetUserId())
 
 	respReg, err = st.AuthClient.Register(ctx, &pb.RegisterRequest{
-		Email:    email,
+		Login:    email,
 		Password: pass,
 	})
 
@@ -92,7 +93,7 @@ func TestRegisterLogin_Login_RegisterWithNoEmail(t *testing.T) {
 	pass := randomFakePassword()
 
 	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
-		Email:    email,
+		Login:    email,
 		Password: pass,
 	})
 
@@ -108,7 +109,7 @@ func TestRegisterLogin_Login_RegisterWithNoPassword(t *testing.T) {
 	pass := ""
 
 	respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
-		Email:    email,
+		Login:    email,
 		Password: pass,
 	})
 
@@ -177,7 +178,7 @@ func TestLogin_FailCases(t *testing.T) {
 			pass := randomFakePassword()
 
 			respReg, err := st.AuthClient.Register(ctx, &pb.RegisterRequest{
-				Email:    email,
+				Login:    email,
 				Password: pass,
 			})
 
@@ -185,7 +186,7 @@ func TestLogin_FailCases(t *testing.T) {
 			assert.NotEmpty(t, respReg.GetUserId())
 
 			respLogin, err := st.AuthClient.Login(ctx, &pb.LoginRequest{
-				Email:    tt.email,
+				Login:    tt.email,
 				Password: tt.pass,
 				AppId:    tt.appID,
 			})

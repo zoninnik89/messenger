@@ -1,11 +1,12 @@
 CREATE TABLE IF NOT EXISTS users
 (
     id INTEGER PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
+    login TEXT NOT NULL UNIQUE,
+    user_id TEXT NOT NULL UNIQUE,
     pass_hash BLOB NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_login ON users (login);
 
 CREATE TABLE IF NOT EXISTS apps
 (
@@ -13,3 +14,9 @@ CREATE TABLE IF NOT EXISTS apps
     name TEXT NOT NULL UNIQUE,
     secret TEXT NOT NULL UNIQUE
 );
+
+-- Insert a new record into the apps table after creating it
+
+INSERT INTO apps (id, name, secret)
+VALUES (1,'app', 'secret')
+ON CONFLICT DO NOTHING;

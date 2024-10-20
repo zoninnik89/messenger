@@ -2,15 +2,24 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"time"
+
+	"strconv"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
 	"github.com/zoninnik89/messenger/facade-service/internal/config"
-	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/chat/send-message"
+	grpcgateway "github.com/zoninnik89/messenger/facade-service/internal/gateway"
+	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/auth/login"
+	"github.com/zoninnik89/messenger/facade-service/internal/http-server/handlers/auth/register"
 	"github.com/zoninnik89/messenger/facade-service/internal/logging"
+	websocketserver "github.com/zoninnik89/messenger/facade-service/internal/websocket-server"
 	"go.uber.org/zap"
-	"time"
 )
 
 func main() {
@@ -18,7 +27,9 @@ func main() {
 	logger := logging.InitLogger()
 	defer logging.Sync()
 
-	logger.Info("starting facade service")
+	strPort := strconv.Itoa(cfg.HTTPServer.Port)
+
+	logger.Info("starting facade service", zap.String("port", strPort))
 
 	registry, err := consul.NewRegistry(cfg.HTTPServer.Address, cfg.Consul.Port)
 	if err != nil {
@@ -56,6 +67,8 @@ func main() {
 		}
 	}(registry, ctx, instanceID)
 
+	gateway := grpcgateway.NewGRPCGateway(registry)
+
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
@@ -63,5 +76,27 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/send", send_message.New())
+	// Basic CORS configuration
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3001"},                   // Allow all origins
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Allow specific methods
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "auth_token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true, // Allow cookies to be sent
+		MaxAge:           300,  // Maximum value for the preflight request cache
+	}))
+
+	router.Post("/login", login.New(gateway))
+	router.Post("/register", register.New(gateway))
+
+	wsServer := websocketserver.NewWebsocketServer(gateway)
+
+	router.Get("/ws", wsServer.ServeHTTP)
+
+	// Start the server using http.Serve with the custom listener
+	logger.Info("http server is listening", zap.String("port", "3002"))
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", "3002"), router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
+
 }

@@ -129,7 +129,7 @@ func (a *Auth) RegisterNewUser(
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	a.logger.Info("user registered")
+	a.logger.Infow("user registered", "op", op, "userID", id)
 
 	return id, nil
 }
