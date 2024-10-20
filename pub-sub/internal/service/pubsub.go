@@ -10,6 +10,7 @@ import (
 	"github.com/zoninnik89/messenger/pub-sub/internal/storage"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
+	"strconv"
 )
 
 type PubSubService struct {
@@ -52,8 +53,9 @@ func (p *PubSubService) Subscribe(userID string, stream pb.PubSubService_Subscri
 	p.Connections.Add(userID, channel)
 
 	// change for a call to DB or cache, now the data is taken just from a hashmap with few users and chats
-	for _, chatID := range p.UserChats.Users[userID] {
-		p.ChatsParticipants.Add(chatID, userID)
+	for i := 1; i <= 5; i++ {
+		p.ChatsParticipants.Add(strconv.Itoa(i), userID)
+		p.Logger.Infof("subscribed user: %s to chat: %s", userID, strconv.Itoa(i))
 	}
 
 	defer func() {
@@ -114,17 +116,15 @@ func (p *PubSubService) ConsumeAndSendoutMessage(ctx context.Context, consumer *
 	}
 
 	// If there are no available recipients
-	if len(chatParticipants.Store) <= 1 {
-		return "", fmt.Errorf("%s: error validating message %v: %w", op, messageID, ErrNoChatSubscribers)
-	}
+	//if len(chatParticipants.Store) <= 1 {
+	//	return "", fmt.Errorf("%s: error validating message %v: %w", op, messageID, ErrNoChatSubscribers)
+	//}
 
 	// Send the message to all clients
 	for recipientID := range chatParticipants.Store {
 		channel, err := p.Connections.Get(recipientID)
 		if err != nil {
 			p.Logger.Errorw("unsuccessful user chan retrieval", "op", op, "recipientID", recipientID, "error", err)
-		} else if senderID == recipientID {
-			p.Logger.Errorw("sender ID == user ID, message not sent", "op", op, "recipientID", recipientID, "error", err)
 		} else {
 			p.Logger.Infow(
 				"sending message to recipient",
