@@ -410,16 +410,18 @@ var ChatClientService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	ChatHistoryService_GetMessages_FullMethodName          = "/api.ChatHistoryService/GetMessages"
-	ChatHistoryService_SendMessageReadEvent_FullMethodName = "/api.ChatHistoryService/SendMessageReadEvent"
+	ChatHistoryService_CreateChat_FullMethodName                  = "/api.ChatHistoryService/CreateChat"
+	ChatHistoryService_GetChatMessages_FullMethodName             = "/api.ChatHistoryService/GetChatMessages"
+	ChatHistoryService_GetChatsListByParticipantID_FullMethodName = "/api.ChatHistoryService/GetChatsListByParticipantID"
 )
 
 // ChatHistoryServiceClient is the client API for ChatHistoryService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatHistoryServiceClient interface {
-	GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*GetMessagesResponse, error)
-	SendMessageReadEvent(ctx context.Context, in *SendMessageReadEventRequest, opts ...grpc.CallOption) (*SendMessageReadEventResponse, error)
+	CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error)
+	GetChatMessages(ctx context.Context, in *GetChatMessagesRequest, opts ...grpc.CallOption) (*GetChatMessagesResponse, error)
+	GetChatsListByParticipantID(ctx context.Context, in *GetChatsListByParticipantIDRequest, opts ...grpc.CallOption) (*GetChatsListByParticipantIDResponse, error)
 }
 
 type chatHistoryServiceClient struct {
@@ -430,20 +432,30 @@ func NewChatHistoryServiceClient(cc grpc.ClientConnInterface) ChatHistoryService
 	return &chatHistoryServiceClient{cc}
 }
 
-func (c *chatHistoryServiceClient) GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*GetMessagesResponse, error) {
+func (c *chatHistoryServiceClient) CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetMessagesResponse)
-	err := c.cc.Invoke(ctx, ChatHistoryService_GetMessages_FullMethodName, in, out, cOpts...)
+	out := new(CreateChatResponse)
+	err := c.cc.Invoke(ctx, ChatHistoryService_CreateChat_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chatHistoryServiceClient) SendMessageReadEvent(ctx context.Context, in *SendMessageReadEventRequest, opts ...grpc.CallOption) (*SendMessageReadEventResponse, error) {
+func (c *chatHistoryServiceClient) GetChatMessages(ctx context.Context, in *GetChatMessagesRequest, opts ...grpc.CallOption) (*GetChatMessagesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendMessageReadEventResponse)
-	err := c.cc.Invoke(ctx, ChatHistoryService_SendMessageReadEvent_FullMethodName, in, out, cOpts...)
+	out := new(GetChatMessagesResponse)
+	err := c.cc.Invoke(ctx, ChatHistoryService_GetChatMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatHistoryServiceClient) GetChatsListByParticipantID(ctx context.Context, in *GetChatsListByParticipantIDRequest, opts ...grpc.CallOption) (*GetChatsListByParticipantIDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChatsListByParticipantIDResponse)
+	err := c.cc.Invoke(ctx, ChatHistoryService_GetChatsListByParticipantID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -454,8 +466,9 @@ func (c *chatHistoryServiceClient) SendMessageReadEvent(ctx context.Context, in 
 // All implementations must embed UnimplementedChatHistoryServiceServer
 // for forward compatibility.
 type ChatHistoryServiceServer interface {
-	GetMessages(context.Context, *GetMessagesRequest) (*GetMessagesResponse, error)
-	SendMessageReadEvent(context.Context, *SendMessageReadEventRequest) (*SendMessageReadEventResponse, error)
+	CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error)
+	GetChatMessages(context.Context, *GetChatMessagesRequest) (*GetChatMessagesResponse, error)
+	GetChatsListByParticipantID(context.Context, *GetChatsListByParticipantIDRequest) (*GetChatsListByParticipantIDResponse, error)
 	mustEmbedUnimplementedChatHistoryServiceServer()
 }
 
@@ -466,11 +479,14 @@ type ChatHistoryServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedChatHistoryServiceServer struct{}
 
-func (UnimplementedChatHistoryServiceServer) GetMessages(context.Context, *GetMessagesRequest) (*GetMessagesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMessages not implemented")
+func (UnimplementedChatHistoryServiceServer) CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateChat not implemented")
 }
-func (UnimplementedChatHistoryServiceServer) SendMessageReadEvent(context.Context, *SendMessageReadEventRequest) (*SendMessageReadEventResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendMessageReadEvent not implemented")
+func (UnimplementedChatHistoryServiceServer) GetChatMessages(context.Context, *GetChatMessagesRequest) (*GetChatMessagesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChatMessages not implemented")
+}
+func (UnimplementedChatHistoryServiceServer) GetChatsListByParticipantID(context.Context, *GetChatsListByParticipantIDRequest) (*GetChatsListByParticipantIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChatsListByParticipantID not implemented")
 }
 func (UnimplementedChatHistoryServiceServer) mustEmbedUnimplementedChatHistoryServiceServer() {}
 func (UnimplementedChatHistoryServiceServer) testEmbeddedByValue()                            {}
@@ -493,38 +509,56 @@ func RegisterChatHistoryServiceServer(s grpc.ServiceRegistrar, srv ChatHistorySe
 	s.RegisterService(&ChatHistoryService_ServiceDesc, srv)
 }
 
-func _ChatHistoryService_GetMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetMessagesRequest)
+func _ChatHistoryService_CreateChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateChatRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatHistoryServiceServer).GetMessages(ctx, in)
+		return srv.(ChatHistoryServiceServer).CreateChat(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ChatHistoryService_GetMessages_FullMethodName,
+		FullMethod: ChatHistoryService_CreateChat_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatHistoryServiceServer).GetMessages(ctx, req.(*GetMessagesRequest))
+		return srv.(ChatHistoryServiceServer).CreateChat(ctx, req.(*CreateChatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatHistoryService_SendMessageReadEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendMessageReadEventRequest)
+func _ChatHistoryService_GetChatMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChatMessagesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatHistoryServiceServer).SendMessageReadEvent(ctx, in)
+		return srv.(ChatHistoryServiceServer).GetChatMessages(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ChatHistoryService_SendMessageReadEvent_FullMethodName,
+		FullMethod: ChatHistoryService_GetChatMessages_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatHistoryServiceServer).SendMessageReadEvent(ctx, req.(*SendMessageReadEventRequest))
+		return srv.(ChatHistoryServiceServer).GetChatMessages(ctx, req.(*GetChatMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatHistoryService_GetChatsListByParticipantID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChatsListByParticipantIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatHistoryServiceServer).GetChatsListByParticipantID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatHistoryService_GetChatsListByParticipantID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatHistoryServiceServer).GetChatsListByParticipantID(ctx, req.(*GetChatsListByParticipantIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -537,12 +571,16 @@ var ChatHistoryService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ChatHistoryServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetMessages",
-			Handler:    _ChatHistoryService_GetMessages_Handler,
+			MethodName: "CreateChat",
+			Handler:    _ChatHistoryService_CreateChat_Handler,
 		},
 		{
-			MethodName: "SendMessageReadEvent",
-			Handler:    _ChatHistoryService_SendMessageReadEvent_Handler,
+			MethodName: "GetChatMessages",
+			Handler:    _ChatHistoryService_GetChatMessages_Handler,
+		},
+		{
+			MethodName: "GetChatsListByParticipantID",
+			Handler:    _ChatHistoryService_GetChatsListByParticipantID_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

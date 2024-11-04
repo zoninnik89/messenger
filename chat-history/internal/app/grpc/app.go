@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	chathistorygrpc "github.com/zoninnik89/messenger/chat-history/internal/grpc"
 	"github.com/zoninnik89/messenger/chat-history/internal/logging"
 	"github.com/zoninnik89/messenger/chat-history/internal/types"
-	chathistorygrpc "github.com/zoninnik89/messenger/chat-history/internal/grpc"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"net"
@@ -22,8 +22,8 @@ type App struct {
 
 func NewApp(
 	chatHistoryService types.ChatHistoryServiceInterface,
-	port int
-	) *App {
+	port int,
+) *App {
 
 	l := logging.GetLogger().Sugar()
 	grpcServer := grpc.NewServer()
@@ -60,7 +60,7 @@ func (a *App) MustConsume(ctx context.Context, consumer *kafka.Consumer) {
 
 func (a *App) Run() error {
 	const op = "grpcapp.Run"
-	a.logger.Infow("starting grpc app", "op", op,"port", a.port)
+	a.logger.Infow("starting grpc app", "op", op, "port", a.port)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
 	if err != nil {
