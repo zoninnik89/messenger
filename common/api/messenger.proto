@@ -42,7 +42,7 @@ message Message {
   string sender_id = 2;
   string message_id = 3;
   string message_text = 4;
-  string sent_ts = 5;
+  int64 sent_ts = 5;
 }
 
 message SubscribeRequest {
@@ -91,8 +91,8 @@ message CreateChatResponse {
 
 message GetChatMessagesRequest {
   string chat_id = 1;
-  string from_ts = 2;
-  string to_ts = 3;
+  int64 from_ts = 2;
+  int64 to_ts = 3;
 }
 
 message GetChatMessagesResponse {
@@ -104,7 +104,7 @@ message Chat {
 }
 
 message GetChatsListByParticipantIDRequest {
-  string chat_id = 1;
+  string participant_id = 1;
 }
 
 message GetChatsListByParticipantIDResponse {

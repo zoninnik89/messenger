@@ -37,7 +37,6 @@ func main() {
 		cfg.GRPC.Port,
 		cfg.GRPC.Name,
 	); err != nil {
-
 		logger.Panic("failed to register service", zap.Error(err))
 		panic(err)
 	}

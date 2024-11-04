@@ -3,17 +3,19 @@ package types
 import (
 	"context"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	pb "github.com/zoninnik89/messenger/common/api"
+	"github.com/zoninnik89/messenger/chat-history/internal/domain/models"
 )
 
 type ChatHistoryServiceInterface interface {
 	ConsumeMessage(ctx context.Context, queue *kafka.Consumer) error
-	GetMessages(ctx context.Context, request *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error)
-	ConsumeMessageReadEvent(ctx context.Context, request *pb.SendMessageReadEventRequest) error
+	GetChatMessages(ctx context.Context, chatID string, fromTS, toTS int64) ([]models.Message, error)
+	GetChatsByUserID(ctx context.Context, userID string) ([]models.Chat, error)
+	GetChatByID(ctx context.Context, chatID string) (models.Chat, error)
 }
 
 type StoreInterface interface {
-	Add(ctx context.Context, chatID, senderID, messageID, messageText, sentTime string) error
-	GetAll(ctx context.Context, chatID, fromTS, toTS string) ([]*pb.Message, error)
-	AddReadEvent(ctx context.Context, chatId, messageId, readByUserId, readAt string) error
+	SaveMessage(ctx context.Context, messageID string, chatID string, senderID string, messageText string, sentTS int64) error
+	GetChatMessages(ctx context.Context, chatID string, fromTS int64, toTS int64) ([]models.Message, error)
+	GetChatsByUserID(ctx context.Context, userID string) ([]models.Chat, error)
+	GetChatByID(ctx context.Context, chatID string) (models.Chat, error)
 }

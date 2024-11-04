@@ -29,10 +29,10 @@ func NewStorage(storagePath string) (*Storage, error) {
 func (s *Storage) SaveMessage(
 	ctx context.Context,
 	messageID string,
-	senderID string,
 	chatID string,
+	senderID string,
 	messageText string,
-	sentTS string,
+	sentTS int64,
 ) error {
 
 	const op = "storage.sqlite.SaveMessage"
@@ -132,4 +132,28 @@ func (s *Storage) GetChatsByUserID(ctx context.Context, userID string) ([]models
 	}
 
 	return chats, nil
+}
+
+func (s *Storage) GetChatByID(ctx context.Context, chatID string) (models.Chat, error) {
+	const op = "storage.sqlite.GetChatByID"
+	stmt, err := s.db.Prepare(
+		"SELECT id FROM chats WHERE chatID = ?",
+	)
+	if err != nil {
+		return models.Chat{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	var chat models.Chat
+
+	row := stmt.QueryRowContext(ctx, chatID)
+	err = row.Scan(&chat.ID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Chat{}, storage.ErrChatNotFound
+		}
+
+		return models.Chat{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return chat, nil
 }

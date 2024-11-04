@@ -2,106 +2,91 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"github.com/zoninnik89/messenger/chat-history/internal/app"
+	"github.com/zoninnik89/messenger/chat-history/internal/config"
 	c "github.com/zoninnik89/messenger/chat-history/internal/consumer"
-	h "github.com/zoninnik89/messenger/chat-history/internal/grpc"
 	"github.com/zoninnik89/messenger/chat-history/internal/logging"
-	s "github.com/zoninnik89/messenger/chat-history/internal/service"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
 	zap "go.uber.org/zap"
-	"google.golang.org/grpc"
 	_ "google.golang.org/grpc"
-	"net"
+	"os"
+	"os/signal"
 	_ "strconv"
+	"syscall"
 	"time"
 )
 
 func main() {
+	cfg := config.MustLoad()
 	logger := logging.InitLogger()
 	defer logging.Sync()
 
-	registry, err := consul.NewRegistry(consulAddress, serviceName)
+	logger.Info("starting chat-history service")
+
+	registry, err := consul.NewRegistry(cfg.GRPC.Address, cfg.Consul.Port)
 	if err != nil {
-		logger.Panic("Failed to connect to Consul", zap.Error(err))
+		logger.Panic("failed to connect to Consul", zap.Error(err))
 		panic(err)
 	}
 
 	ctx := context.Background()
-	instanceID := discovery.GenerateInstanceID(serviceName)
-	if err := registry.Register(ctx, instanceID, serviceName, grpcAddress); err != nil {
-		logger.Panic("Failed to register service", zap.Error(err))
+	instanceID := discovery.GenerateInstanceID(cfg.GRPC.Name)
+	if err := registry.Register(
+		ctx,
+		instanceID,
+		cfg.GRPC.Address,
+		cfg.GRPC.Port,
+		cfg.GRPC.Name,
+	); err != nil {
+		logger.Panic("failed to register service", zap.Error(err))
 		panic(err)
 	}
 
 	go func() {
 		for {
-			if err := registry.HealthCheck(instanceID, serviceName); err != nil {
+			if err := registry.HealthCheck(instanceID); err != nil {
 				logger.Warn("Failed to health check", zap.Error(err))
 			}
 			time.Sleep(time.Second * 1)
 		}
 	}()
 
-	defer func(registry *consul.Registry, ctx context.Context, instanceID string, serviceName string) {
-		err := registry.Deregister(ctx, instanceID, serviceName)
+	defer func(registry *consul.Registry, ctx context.Context, instanceID string) {
+		err := registry.Deregister(ctx, instanceID)
 		if err != nil {
 			logger.Fatal("Failed to deregister service", zap.Error(err))
 		}
-	}(registry, ctx, instanceID, serviceName)
+	}(registry, ctx, instanceID)
 
-	grpcServer := grpc.NewServer()
+	ctxWithCancel, cancel := context.WithCancel(ctx)
 
-	l, err := net.Listen("tcp", grpcAddress)
-	if err != nil {
-		logger.Fatal("Failed to listen:", zap.Error(err))
-	}
-	defer func(l net.Listener) {
-		err := l.Close()
-		if err != nil {
-			logger.Warn("Failed to close listener", zap.Error(err))
-		}
-	}(l)
-
-	uri := fmt.Sprintf("mongodb://%s:%s@%s", mongoUser, mongoPass, mongoAddr)
-	mongoClient, err := connectToMongoDB(uri)
-	if err != nil {
-		logger.Fatal("Failed to connect to mongodb", zap.Error(err))
-	}
-
-	store := NewStore(mongoClient)
-
-	service := s.NewChatHistoryService(store)
-	h.NewGrpcHandler(grpcServer, service)
-
-	logger.Info("Starting GRPC server", zap.String("port", grpcAddress))
-
-	logger.Info("Starting Kafka Consumer")
+	logger.Info("starting Kafka Consumer")
 	consumer, err := c.NewKafkaConsumer()
 	if err != nil {
-		logger.Panic("Failed to create kafka consumer", zap.Error(err))
+		logger.Panic("failed to create kafka consumer", zap.Error(err))
 		panic(err)
 	}
 
-	topics := []string{"messages", "read_events"}
+	topics := []string{"messages"}
 	err = consumer.SubscribeTopics(topics, nil)
-
 	if err != nil {
 		panic(err)
 	}
 
-	go func() {
-		m, err := service.ConsumeMessage(ctx, consumer)
-		if err != nil {
-			logger.Fatal("Error consuming a message", zap.Error(err))
-		} else {
-			logger.Info("Message was consumed with status", zap.String("message", m.Status))
-		}
+	application := app.NewApp(cfg.GRPC.Port, cfg.Storage.ChanBuffer)
+	go application.GRPCsrv.MustRun()
+	go application.GRPCsrv.MustConsume(ctxWithCancel, consumer)
 
-		time.Sleep(time.Second * 1)
-	}()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 
-	if err := grpcServer.Serve(l); err != nil {
-		logger.Fatal("Failed to serve", zap.Error(err))
-	}
+	sgnl := <-stop
+
+	logger.Info("shutting down gracefully", zap.Any("signal", sgnl))
+
+	cancel()
+	application.GRPCsrv.Stop()
+
+	logger.Info("shut down gracefully")
 }

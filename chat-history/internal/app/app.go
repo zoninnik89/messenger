@@ -3,6 +3,7 @@ package app
 import (
 	grpcapp "github.com/zoninnik89/messenger/chat-history/internal/app/grpc"
 	"github.com/zoninnik89/messenger/chat-history/internal/service"
+	"github.com/zoninnik89/messenger/chat-history/internal/storage/sqlite"
 )
 
 type App struct {

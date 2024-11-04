@@ -2,18 +2,19 @@ package consumer
 
 import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	common "github.com/zoninnik89/messenger/common"
 )
 
-func NewKafkaConsumer(
-	kafkaServerAddress string,
-	kafkaConsumerID string,
-	kafkaGroupID string,
-) (*kafka.Consumer, error) {
+var (
+	KafkaServerAddress = common.EnvString("KAFKA_SERVER_ADDRESS", "localhost:9092")
+)
+
+func NewKafkaConsumer() (*kafka.Consumer, error) {
 
 	configMap := &kafka.ConfigMap{
-		"bootstrap.servers": kafkaServerAddress,
-		"client.id":         kafkaConsumerID,
-		"group.id":          kafkaGroupID,
+		"bootstrap.servers": KafkaServerAddress,
+		"client.id":         "chat-history-consumer",
+		"group.id":          "pub-sub-group",
 	}
 
 	c, err := kafka.NewConsumer(configMap)
