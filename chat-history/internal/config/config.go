@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	Env    string       `yaml:"env" env-default:"local"`
-	GRPC   GRPCConfig   `yaml:"grpc"`
-	Kafka  KafkaConfig  `yaml:"kafka"`
-	Consul ConsulConfig `yaml:"consul"`
+	Env         string       `yaml:"env" env-default:"local"`
+	GRPC        GRPCConfig   `yaml:"grpc"`
+	Kafka       KafkaConfig  `yaml:"kafka"`
+	Consul      ConsulConfig `yaml:"consul"`
+	StoragePath string       `yaml:"storage_path"`
 }
 
 type GRPCConfig struct {

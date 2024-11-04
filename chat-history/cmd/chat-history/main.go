@@ -74,7 +74,7 @@ func main() {
 		panic(err)
 	}
 
-	application := app.NewApp(cfg.GRPC.Port, cfg.Storage.ChanBuffer)
+	application := app.NewApp(cfg.GRPC.Port, cfg.StoragePath)
 	go application.GRPCsrv.MustRun()
 	go application.GRPCsrv.MustConsume(ctxWithCancel, consumer)
 
