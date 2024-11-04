@@ -25,7 +25,7 @@ type Response struct {
 
 func New(g *grpcgateway.Gateway) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.chat.register.New"
+		const op = "grpc.chat.register.New"
 		logger := logging.GetLogger().Sugar()
 
 		var req Request

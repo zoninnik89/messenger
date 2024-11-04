@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/zoninnik89/messenger/chat-history/logging"
-	"github.com/zoninnik89/messenger/chat-history/types"
+	"github.com/zoninnik89/messenger/chat-history/internal/logging"
+	"github.com/zoninnik89/messenger/chat-history/internal/types"
 	pb "github.com/zoninnik89/messenger/common/api"
 	"go.uber.org/zap"
 	"strings"

@@ -3,34 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	c "github.com/zoninnik89/messenger/chat-history/consumer"
-	h "github.com/zoninnik89/messenger/chat-history/handlers"
-	"github.com/zoninnik89/messenger/chat-history/logging"
-	s "github.com/zoninnik89/messenger/chat-history/service"
-	common "github.com/zoninnik89/messenger/common"
+	c "github.com/zoninnik89/messenger/chat-history/internal/consumer"
+	h "github.com/zoninnik89/messenger/chat-history/internal/grpc"
+	"github.com/zoninnik89/messenger/chat-history/internal/logging"
+	s "github.com/zoninnik89/messenger/chat-history/internal/service"
 	"github.com/zoninnik89/messenger/common/discovery"
 	"github.com/zoninnik89/messenger/common/discovery/consul"
-	"go.mongodb.org/mongo-driver/mongo"
-	_ "go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	_ "go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-	_ "go.mongodb.org/mongo-driver/mongo/readpref"
 	zap "go.uber.org/zap"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc"
 	"net"
 	_ "strconv"
 	"time"
-)
-
-var (
-	serviceName   = "chat-history"
-	grpcAddress   = common.EnvString("GRPC_ADDR", ":2001")
-	consulAddress = common.EnvString("CONSUL_ADDR", ":8500")
-	mongoUser     = common.EnvString("MONGO_DB_USER", "root")
-	mongoPass     = common.EnvString("MONGO_DB_PASS", "rootpassword")
-	mongoAddr     = common.EnvString("MONGO_DB_HOST", "localhost:27017")
 )
 
 func main() {
@@ -120,16 +104,4 @@ func main() {
 	if err := grpcServer.Serve(l); err != nil {
 		logger.Fatal("Failed to serve", zap.Error(err))
 	}
-}
-
-func connectToMongoDB(uri string) (*mongo.Client, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
-	if err != nil {
-		return nil, err
-	}
-
-	err = client.Ping(ctx, readpref.Primary())
-	return client, err
 }
