@@ -101,8 +101,8 @@ func validateMessage(req *pb.SendMessageRequest) error {
 		return status.Error(codes.InvalidArgument, "message text is required")
 	}
 
-	if sentTime == "" {
-		return status.Error(codes.InvalidArgument, "sent timestamp is required")
+	if sentTime < 0 {
+		return status.Error(codes.InvalidArgument, "sentTime has be larger than zero")
 	}
 
 	return nil

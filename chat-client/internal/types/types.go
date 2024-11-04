@@ -7,5 +7,5 @@ import (
 
 type ChatClientInterface interface {
 	SubscribeForMessages(ctx context.Context, userID string, stream pb.ChatClientService_GetMessagesStreamServer) error
-	SendMessage(messageID string, chatID string, senderID string, messageText string, sentTime string) error
+	SendMessage(messageID string, chatID string, senderID string, messageText string, sentTime int64) error
 }

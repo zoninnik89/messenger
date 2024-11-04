@@ -120,7 +120,7 @@ func (c *ChatClient) SendMessage(
 	chatID string,
 	senderID string,
 	messageText string,
-	sentTime string,
+	sentTime int64,
 ) error {
 	const op = "service.SendMessage"
 
