@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -25,7 +24,7 @@ type Request struct {
 type Response struct {
 	response.Response
 	MessageID string `json:"message_id"`
-	SentTS    string `json:"sent_ts"`
+	SentTS    int64  `json:"sent_ts"`
 }
 
 func New(g *grpcgateway.Gateway, senderID string) http.HandlerFunc {
@@ -69,7 +68,7 @@ func New(g *grpcgateway.Gateway, senderID string) http.HandlerFunc {
 			ChatId:      req.ChatID,
 			SenderId:    senderID,
 			MessageText: req.MessageText,
-			SentTs:      strconv.FormatInt(sentTS, 10),
+			SentTs:      sentTS,
 		}
 
 		res, err := g.SendMessage(
@@ -93,7 +92,7 @@ func New(g *grpcgateway.Gateway, senderID string) http.HandlerFunc {
 		render.JSON(w, r, Response{
 			Response:  response.OK(),
 			MessageID: messageID,
-			SentTS:    strconv.FormatInt(sentTS, 10),
+			SentTS:    sentTS,
 		})
 	}
 }
