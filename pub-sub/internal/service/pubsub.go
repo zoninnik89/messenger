@@ -175,7 +175,7 @@ func (p *PubSubService) validateMessage(msg *pb.Message) error {
 		return fmt.Errorf("%s: %w", op, ErrNoMessageID)
 	}
 
-	if chatID == "" || senderID == "" || messageText == "" || sentTime == "" {
+	if chatID == "" || senderID == "" || messageText == "" || sentTime < 0 {
 		return fmt.Errorf("%s: error validating message %v: %w", op, messageID, ErrMessageMissingField)
 	}
 
